@@ -57,9 +57,9 @@ func (hl *HLayout) Size() (int, int) {
 }
 
 //
-func (hl *HLayout) HandleClick(mouseX, mouseY int) {
-	fmt.Println("hlayout", hl.Border, "|", mouseX, mouseY, hl.Padding)
-}
+// func (hl *HLayout) HandleClick(mouseX, mouseY int) {
+// 	fmt.Println("hlayout", hl.Border, "|", mouseX, mouseY, hl.Padding)
+// }
 
 func (hl *HLayout) drawBorder(x, y int) {
 	var runes []rune = borderRunes[hl.Border]

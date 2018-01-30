@@ -1,8 +1,6 @@
 package tbui
 
 import (
-	"fmt"
-
 	termbox "github.com/nsf/termbox-go"
 )
 
@@ -110,27 +108,22 @@ func (eb *EditBox) Handle(ev termbox.Event) {
 
 //
 func (eb *EditBox) HandleClick(mouseX, mouseY int) {
-	fmt.Println("editbox", mouseX, mouseY, eb.Padding)
+	// fmt.Println("editbox", mouseX, mouseY)
 	if newCIdx := eb.windowIdx + mouseX - eb.Padding.Left(); newCIdx-eb.windowIdx == 0 {
 		if eb.windowIdx > 0 {
 			eb.windowIdx--
 		}
 		eb.cursorIdx = newCIdx
-	} else if newCIdx-eb.windowIdx == eb.Width-1 {
+	} else if newCIdx > len(eb.text) {
+		eb.cursorIdx = len(eb.text)
+	} else if newCIdx-eb.windowIdx == eb.Width-1 { //&& len(eb.text) > eb.Width {
 		if eb.windowIdx+eb.Width < len(eb.text) {
 			eb.windowIdx++
 		}
 		eb.cursorIdx = newCIdx
 	} else if newCIdx < len(eb.text) && newCIdx-eb.windowIdx > 0 {
 		eb.cursorIdx = newCIdx
-	} else if newCIdx > len(eb.text) {
-		eb.cursorIdx = len(eb.text)
 	}
-}
-
-//
-func (eb *EditBox) Focusable() bool {
-	return true
 }
 
 //

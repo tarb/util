@@ -1,8 +1,6 @@
 package tbui
 
 import (
-	"fmt"
-
 	termbox "github.com/nsf/termbox-go"
 )
 
@@ -57,9 +55,9 @@ func (vl *VLayout) Size() (int, int) {
 }
 
 //
-func (vl *VLayout) HandleClick(mouseX, mouseY int) {
-	fmt.Println("vlayout", vl.Border, "|", mouseX, mouseY, vl.Padding)
-}
+// func (vl *VLayout) HandleClick(mouseX, mouseY int) {
+// 	fmt.Println("vlayout", vl.Border, "|", mouseX, mouseY, vl.Padding)
+// }
 
 //
 func (vl *VLayout) drawBorder(x, y int) {
@@ -84,26 +82,16 @@ func (vl *VLayout) drawBorder(x, y int) {
 }
 
 //
-func (vl *VLayout) GetFocusable() [][]Focusable {
-	var eles = make([][]Focusable, 0, 10)
+func (vl *VLayout) GetFocusable() []Focusable {
+	var eles = make([]Focusable, 0, 10)
 
 	for _, child := range vl.Children {
 		if cont, ok := child.(Container); ok {
-			var contCh = cont.GetFocusable()
-
-			if _, ok := child.(Focusable); ok {
-				for i := range contCh {
-					contCh[i] = append(contCh[i], cont)
-				}
-			}
-
 			eles = append(eles, cont.GetFocusable()...)
 		} else if focusable, ok := child.(Focusable); ok {
 			eles = append(eles, focusable)
 		}
 	}
-
-	fmt.Println(eles)
 
 	return eles
 }
@@ -140,18 +128,6 @@ func (vl *VLayout) NextFocusable(current Focusable) Focusable {
 //
 func (vl *VLayout) FocusClicked(mouseX, mouseY int) Focusable {
 	var w, h int = vl.Size()
-
-	// termbox uses coords based from 1, 1 not 0, 0
-	// keep it consistent for bubbling through containers
-	// but -1,-1 for the HandleClick methods so they use 0,0
-
-	// if i ever add the Clickable interface to VLayout
-	// if mouseX > 0 && mouseY > 0 && mouseX <= w && mouseY <= h {
-	// 	vl.HandleClick(mouseX, mouseY)
-	// }
-
-	// normalise mouse click to this element so it can be
-	// passed down to children
 
 	// adjust for padding
 	mouseX, mouseY = mouseX-vl.Padding.Left(), mouseY-vl.Padding.Up()

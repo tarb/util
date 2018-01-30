@@ -39,8 +39,3 @@ func (t *Text) Size() (int, int) {
 	}
 	return t.Padding.Left() + t.Padding.Right() + w, t.Padding.Up() + t.Padding.Down() + 1
 }
-
-//
-// func (t *Text) HandleClick(mouseX, mouseY int) {
-// 	fmt.Println("text", t.Text, mouseX, mouseY, t.Padding)
-// }
