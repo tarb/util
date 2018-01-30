@@ -27,20 +27,47 @@ func main() {
 	pswd = &ui.EditBox{Width: 20, Padding: ui.Padding{0, 1}, HideContent: true, Submit: submit}
 	save = &ui.CheckBox{Padding: ui.Padding{1, 0}, Submit: submit}
 
-	var focus ui.Element
-	var window = &ui.VLayout{ // outer window, taking up whole screen - padding adjusted on window resize
+	var focus ui.Focusable
+	// var window = &ui.VLayout{ // outer window, taking up whole screen - padding adjusted on window resize
+	// 	Children: []ui.Element{
+	// 		&ui.VLayout{ //inner window, with border
+	// 			Children: []ui.Element{
+	// 				&ui.Text{Text: "Sample Login", Padding: ui.Padding{1}, Width: 30, Allign: ui.Center},
+	// 				&ui.HLayout{Children: []ui.Element{&ui.Text{Text: "Username", Padding: ui.Padding{1}, Width: 8}, uname}},
+	// 				&ui.HLayout{Children: []ui.Element{&ui.Text{Text: "Email", Padding: ui.Padding{1}, Width: 8, Allign: ui.Right}, email}},
+	// 				&ui.HLayout{Children: []ui.Element{&ui.Text{Text: "Password", Padding: ui.Padding{1}, Width: 8}, pswd}},
+	// 				&ui.HLayout{Children: []ui.Element{&ui.Text{Text: "Save Details?", Padding: ui.Padding{1}, Width: 22, Allign: ui.Right}, save}},
+	// 				&ui.HLayout{Children: []ui.Element{&ui.Button{Text: "Login", Padding: ui.Padding{0, 3}, Submit: submit}}, Padding: ui.Padding{2, 0, 0, 12}},
+	// 			},
+	// 			Padding: ui.Padding{2, 4},
+	// 			Border:  ui.Thin,
+	// 		},
+	// 	},
+	// }
+
+	var window = &ui.VLayout{
 		Children: []ui.Element{
-			&ui.VLayout{ //inner window, with border
-				Children: []ui.Element{
-					&ui.Text{Text: "Sample Login", Padding: ui.Padding{1}, Width: 30, Allign: ui.Center},
-					&ui.HLayout{Children: []ui.Element{&ui.Text{Text: "Username", Padding: ui.Padding{1}, Width: 8}, uname}},
-					&ui.HLayout{Children: []ui.Element{&ui.Text{Text: "Email", Padding: ui.Padding{1}, Width: 8, Allign: ui.Right}, email}},
-					&ui.HLayout{Children: []ui.Element{&ui.Text{Text: "Password", Padding: ui.Padding{1}, Width: 8}, pswd}},
-					&ui.HLayout{Children: []ui.Element{&ui.Text{Text: "Save Details?", Padding: ui.Padding{1}, Width: 22, Allign: ui.Right}, save}},
-					&ui.HLayout{Children: []ui.Element{&ui.Button{Text: "Login", Padding: ui.Padding{0, 3}, Submit: submit}}, Padding: ui.Padding{2, 0, 0, 12}},
+			&ui.List{
+				Items: []ui.Element{
+					&ui.EditBox{PlaceHolder: "alpha", Padding: ui.Padding{1}, Width: 8},
+					&ui.Text{Text: "hello kerrin"},
+					&ui.EditBox{PlaceHolder: "bravo", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "charlie", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "delta", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "echo", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "foxtrot", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "geko", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "hotel", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "alpha", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "bravo", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "charlie", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "delta", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "echo", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "foxtrot", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "geko", Padding: ui.Padding{1}, Width: 8},
+					&ui.EditBox{PlaceHolder: "hotel", Padding: ui.Padding{1}, Width: 8},
 				},
-				Padding: ui.Padding{2, 4},
-				Border:  ui.Thin,
+				Height: 25,
 			},
 		},
 	}
