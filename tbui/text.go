@@ -41,12 +41,6 @@ func (t *Text) Size() (int, int) {
 }
 
 //
-func (t *Text) Focusable() bool { return false }
-
-//
-func (t *Text) Handle(ev termbox.Event) {}
-
-//
-func (t *Text) HandleClick(mouseX, mouseY int) {
-	//fmt.Println("text", t.Text, mouseX, mouseY, t.Padding)
-}
+// func (t *Text) HandleClick(mouseX, mouseY int) {
+// 	fmt.Println("text", t.Text, mouseX, mouseY, t.Padding)
+// }

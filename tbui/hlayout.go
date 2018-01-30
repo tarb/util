@@ -1,6 +1,8 @@
 package tbui
 
 import (
+	"fmt"
+
 	termbox "github.com/nsf/termbox-go"
 )
 
@@ -55,15 +57,9 @@ func (hl *HLayout) Size() (int, int) {
 }
 
 //
-func (hl *HLayout) Handle(ev termbox.Event) {}
-
-//
 func (hl *HLayout) HandleClick(mouseX, mouseY int) {
-	//fmt.Println("hlayout", hl.Border, "|", mouseX, mouseY, hl.Padding)
+	fmt.Println("hlayout", hl.Border, "|", mouseX, mouseY, hl.Padding)
 }
-
-//
-func (hl *HLayout) Focusable() bool { return false }
 
 func (hl *HLayout) drawBorder(x, y int) {
 	var runes []rune = borderRunes[hl.Border]
@@ -87,18 +83,14 @@ func (hl *HLayout) drawBorder(x, y int) {
 }
 
 //
-func (hl *HLayout) GetFocusable() []Element {
-	var eles = make([]Element, 0, 10)
-
-	if hl.Focusable() {
-		eles = append(eles, hl)
-	}
+func (hl *HLayout) GetFocusable() []Focusable {
+	var eles = make([]Focusable, 0, 10)
 
 	for _, child := range hl.Children {
 		if cont, ok := child.(Container); ok {
 			eles = append(eles, cont.GetFocusable()...)
-		} else if child.Focusable() {
-			eles = append(eles, child)
+		} else if focusable, ok := child.(Focusable); ok {
+			eles = append(eles, focusable)
 		}
 	}
 
@@ -106,8 +98,8 @@ func (hl *HLayout) GetFocusable() []Element {
 }
 
 //
-func (hl *HLayout) NextFocusable(current Element) Element {
-	var eles []Element = hl.GetFocusable()
+func (hl *HLayout) NextFocusable(current Focusable) Focusable {
+	var eles []Focusable = hl.GetFocusable()
 
 	// if there are focusable
 	if len(eles) > 0 {
@@ -136,16 +128,17 @@ func (hl *HLayout) NextFocusable(current Element) Element {
 }
 
 //
-func (hl *HLayout) FocusClicked(mouseX, mouseY int) Element {
+func (hl *HLayout) FocusClicked(mouseX, mouseY int) Focusable {
 	var w, h int = hl.Size()
 
 	// termbox uses coords based from 1, 1 not 0, 0
 	// keep it consistent for bubbling through containers
 	// but -1,-1 for the HandleClick methods
 
-	if mouseX > 0 && mouseY > 0 && mouseX <= w && mouseY <= h {
-		hl.HandleClick(mouseX, mouseY)
-	}
+	// if i ever add the Clickable interface to HLayout
+	// if mouseX > 0 && mouseY > 0 && mouseX <= w && mouseY <= h {
+	// 	hl.HandleClick(mouseX, mouseY)
+	// }
 
 	// normalise mouse click to this element so it can be
 	// passed down to children
@@ -163,12 +156,16 @@ func (hl *HLayout) FocusClicked(mouseX, mouseY int) Element {
 	for _, c := range hl.Children {
 		var cw, ch int = c.Size()
 
+		fmt.Println("click", c)
 		if mouseX > sumX && mouseY > 0 && mouseX <= sumX+cw && mouseY <= ch {
+			if clickable, ok := c.(Clickable); ok {
+				clickable.HandleClick(mouseX-sumX, mouseY)
+			}
 			if cont, ok := c.(Container); ok {
 				return cont.FocusClicked(mouseX-sumX, mouseY)
+			} else if foc, ok := c.(Focusable); ok {
+				return foc
 			}
-			c.HandleClick(mouseX-sumX, mouseY) //needs to be normalized
-			return c
 		}
 
 		sumX += cw

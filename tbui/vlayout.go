@@ -1,6 +1,8 @@
 package tbui
 
 import (
+	"fmt"
+
 	termbox "github.com/nsf/termbox-go"
 )
 
@@ -55,15 +57,9 @@ func (vl *VLayout) Size() (int, int) {
 }
 
 //
-func (vl *VLayout) Handle(ev termbox.Event) {}
-
-//
 func (vl *VLayout) HandleClick(mouseX, mouseY int) {
-	//fmt.Println("vlayout", vl.Border, "|", mouseX, mouseY, vl.Padding)
+	fmt.Println("vlayout", vl.Border, "|", mouseX, mouseY, vl.Padding)
 }
-
-//
-func (vl *VLayout) Focusable() bool { return false }
 
 //
 func (vl *VLayout) drawBorder(x, y int) {
@@ -88,27 +84,33 @@ func (vl *VLayout) drawBorder(x, y int) {
 }
 
 //
-func (vl *VLayout) GetFocusable() []Element {
-	var eles = make([]Element, 0, 10)
-
-	if vl.Focusable() {
-		eles = append(eles, vl)
-	}
+func (vl *VLayout) GetFocusable() [][]Focusable {
+	var eles = make([][]Focusable, 0, 10)
 
 	for _, child := range vl.Children {
 		if cont, ok := child.(Container); ok {
+			var contCh = cont.GetFocusable()
+
+			if _, ok := child.(Focusable); ok {
+				for i := range contCh {
+					contCh[i] = append(contCh[i], cont)
+				}
+			}
+
 			eles = append(eles, cont.GetFocusable()...)
-		} else if child.Focusable() {
-			eles = append(eles, child)
+		} else if focusable, ok := child.(Focusable); ok {
+			eles = append(eles, focusable)
 		}
 	}
+
+	fmt.Println(eles)
 
 	return eles
 }
 
 //
-func (vl *VLayout) NextFocusable(current Element) Element {
-	var eles []Element = vl.GetFocusable()
+func (vl *VLayout) NextFocusable(current Focusable) Focusable {
+	var eles []Focusable = vl.GetFocusable()
 
 	// if there are focusable
 	if len(eles) > 0 {
@@ -136,16 +138,17 @@ func (vl *VLayout) NextFocusable(current Element) Element {
 }
 
 //
-func (vl *VLayout) FocusClicked(mouseX, mouseY int) Element {
+func (vl *VLayout) FocusClicked(mouseX, mouseY int) Focusable {
 	var w, h int = vl.Size()
 
 	// termbox uses coords based from 1, 1 not 0, 0
 	// keep it consistent for bubbling through containers
 	// but -1,-1 for the HandleClick methods so they use 0,0
 
-	if mouseX > 0 && mouseY > 0 && mouseX <= w && mouseY <= h {
-		vl.HandleClick(mouseX, mouseY)
-	}
+	// if i ever add the Clickable interface to VLayout
+	// if mouseX > 0 && mouseY > 0 && mouseX <= w && mouseY <= h {
+	// 	vl.HandleClick(mouseX, mouseY)
+	// }
 
 	// normalise mouse click to this element so it can be
 	// passed down to children
@@ -164,11 +167,14 @@ func (vl *VLayout) FocusClicked(mouseX, mouseY int) Element {
 		var cw, ch int = c.Size()
 
 		if mouseX > 0 && mouseY > sumY && mouseX <= cw && mouseY <= sumY+ch {
+			if clickable, ok := c.(Clickable); ok {
+				clickable.HandleClick(mouseX, mouseY-sumY)
+			}
 			if cont, ok := c.(Container); ok {
 				return cont.FocusClicked(mouseX, mouseY-sumY)
+			} else if foc, ok := c.(Focusable); ok {
+				return foc
 			}
-			c.HandleClick(mouseX, mouseY-sumY)
-			return c
 		}
 
 		sumY += ch

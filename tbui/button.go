@@ -58,8 +58,3 @@ func (b *Button) HandleClick(mouseX, mouseY int) {
 		}
 	}
 }
-
-//
-func (b *Button) Focusable() bool {
-	return true
-}

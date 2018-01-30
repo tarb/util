@@ -1,6 +1,8 @@
 package tbui
 
 import (
+	"fmt"
+
 	termbox "github.com/nsf/termbox-go"
 )
 
@@ -108,7 +110,7 @@ func (eb *EditBox) Handle(ev termbox.Event) {
 
 //
 func (eb *EditBox) HandleClick(mouseX, mouseY int) {
-	//fmt.Println("editbox", mouseX, mouseY, eb.Padding)
+	fmt.Println("editbox", mouseX, mouseY, eb.Padding)
 	if newCIdx := eb.windowIdx + mouseX - eb.Padding.Left(); newCIdx-eb.windowIdx == 0 {
 		if eb.windowIdx > 0 {
 			eb.windowIdx--
@@ -195,3 +197,8 @@ func (eb *EditBox) insert(r rune) {
 
 //
 func (eb *EditBox) Text() string { return string(eb.text) }
+
+//
+func (eb *EditBox) ExpandSize() (int, int) {
+	return eb.Padding.Left() + eb.Width + eb.Padding.Right(), 5
+}

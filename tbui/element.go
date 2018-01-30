@@ -6,14 +6,30 @@ import termbox "github.com/nsf/termbox-go"
 type Element interface {
 	Draw(int, int, Element)
 	Size() (int, int)
+}
+
+//
+type Expandable interface {
+	Element
+	ExpandSize() (int, int)
+}
+
+//
+type Focusable interface {
+	Element
 	Handle(termbox.Event)
+}
+
+//
+type Clickable interface {
+	Element
 	HandleClick(int, int)
-	Focusable() bool
 }
 
 //
 type Container interface {
-	NextFocusable(Element) Element
-	GetFocusable() []Element
-	FocusClicked(int, int) Element
+	Element
+	NextFocusable(Focusable) Focusable
+	GetFocusable() []Focusable
+	FocusClicked(int, int) Focusable
 }

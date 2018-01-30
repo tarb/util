@@ -61,11 +61,6 @@ func (cb *CheckBox) HandleClick(mouseX, mouseY int) {
 }
 
 //
-func (cb *CheckBox) Focusable() bool {
-	return true
-}
-
-//
 func (cb *CheckBox) check() {
 	cb.Checked = !cb.Checked
 }
