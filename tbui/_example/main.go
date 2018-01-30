@@ -50,7 +50,9 @@ func main() {
 			&ui.List{
 				Items: []ui.Element{
 					&ui.EditBox{PlaceHolder: "alpha", Padding: ui.Padding{1}, Width: 8},
-					&ui.Text{Text: "hello kerrin"},
+					// &ui.VLayout{Children: []ui.Element{
+					// 	&ui.EditBox{PlaceHolder: "bravo", Padding: ui.Padding{1}, Width: 8},
+					// },
 					&ui.EditBox{PlaceHolder: "bravo", Padding: ui.Padding{1}, Width: 8},
 					&ui.EditBox{PlaceHolder: "charlie", Padding: ui.Padding{1}, Width: 8},
 					&ui.EditBox{PlaceHolder: "delta", Padding: ui.Padding{1}, Width: 8},
