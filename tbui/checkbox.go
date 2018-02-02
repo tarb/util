@@ -10,6 +10,7 @@ type CheckBox struct {
 	Symbol  rune
 	Padding Padding
 	Submit  func()
+	Bind    *bool
 }
 
 //
@@ -63,4 +64,7 @@ func (cb *CheckBox) HandleClick(mouseX, mouseY int) {
 //
 func (cb *CheckBox) check() {
 	cb.Checked = !cb.Checked
+	if cb.Bind != nil {
+		*cb.Bind = cb.Checked
+	}
 }

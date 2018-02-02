@@ -1,8 +1,6 @@
 package tbui
 
 import (
-	"fmt"
-
 	termbox "github.com/nsf/termbox-go"
 )
 
@@ -156,7 +154,6 @@ func (hl *HLayout) FocusClicked(mouseX, mouseY int) Focusable {
 	for _, c := range hl.Children {
 		var cw, ch int = c.Size()
 
-		fmt.Println("click", c)
 		if mouseX > sumX && mouseY > 0 && mouseX <= sumX+cw && mouseY <= ch {
 			if clickable, ok := c.(Clickable); ok {
 				clickable.HandleClick(mouseX-sumX, mouseY)

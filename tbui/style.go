@@ -1,5 +1,7 @@
 package tbui
 
+import termbox "github.com/nsf/termbox-go"
+
 //
 type Border int
 
@@ -62,3 +64,11 @@ func (p Padding) Down() int {
 	}
 	return p[[4]int{0, 0, 2, 2}[len(p)-1]]
 }
+
+//
+const (
+	ColBackground = termbox.ColorBlack
+	ColText       = termbox.ColorWhite
+	ColBorder     = termbox.ColorBlack | termbox.AttrBold
+	ColAccent     = termbox.ColorRed | termbox.AttrBold
+)

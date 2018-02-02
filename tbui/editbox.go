@@ -11,6 +11,7 @@ type EditBox struct {
 	HideContent bool
 	Submit      func()
 	Padding     Padding
+	Bind        *string
 
 	text      []rune
 	cursorIdx int
@@ -83,25 +84,34 @@ func (eb *EditBox) Size() (int, int) {
 }
 
 //
+func (eb *EditBox) ExpandSize() (int, int) {
+	return eb.Padding.Left() + eb.Width + eb.Padding.Right(), 5
+}
+
+//
 func (eb *EditBox) Handle(ev termbox.Event) {
 	switch ev.Key {
+	case termbox.KeyEnter:
+		if eb.Submit != nil {
+			eb.Submit()
+		}
 	case termbox.KeyArrowLeft:
 		eb.cursorLeft()
 	case termbox.KeyArrowRight:
 		eb.cursorRight()
 	case termbox.KeyBackspace, termbox.KeyBackspace2:
 		eb.backSpace()
+		eb.updateBind()
 	case termbox.KeyDelete, termbox.KeyCtrlD:
 		eb.delete()
+		eb.updateBind()
 	case termbox.KeySpace:
 		eb.insert(' ')
-	case termbox.KeyEnter:
-		if eb.Submit != nil {
-			eb.Submit()
-		}
+		eb.updateBind()
 	default:
 		if ev.Ch != 0 {
 			eb.insert(ev.Ch)
+			eb.updateBind()
 		}
 	}
 }
@@ -192,6 +202,8 @@ func (eb *EditBox) insert(r rune) {
 func (eb *EditBox) Text() string { return string(eb.text) }
 
 //
-func (eb *EditBox) ExpandSize() (int, int) {
-	return eb.Padding.Left() + eb.Width + eb.Padding.Right(), 5
+func (eb *EditBox) updateBind() {
+	if eb.Bind != nil {
+		*eb.Bind = string(eb.text)
+	}
 }
