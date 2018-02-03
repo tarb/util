@@ -8,8 +8,10 @@ import (
 type HLayout struct {
 	Children []Element
 
-	Border  Border
-	Padding Padding
+	MinHeight int
+	MinWidth  int
+	Border    Border
+	Padding   Padding
 }
 
 //
@@ -46,6 +48,13 @@ func (hl *HLayout) Size() (int, int) {
 
 	if hl.Border != None {
 		bdr = 2
+	}
+
+	if cumulativeX < hl.MinWidth {
+		cumulativeX = hl.MinWidth
+	}
+	if maxY < hl.MinHeight {
+		maxY = hl.MinHeight
 	}
 
 	cumulativeX += (hl.Padding.Left() + hl.Padding.Right()) + bdr
@@ -154,7 +163,7 @@ func (hl *HLayout) FocusClicked(mouseX, mouseY int) Focusable {
 	for _, c := range hl.Children {
 		var cw, ch int = c.Size()
 
-		if mouseX > sumX && mouseY > 0 && mouseX <= sumX+cw && mouseY <= ch {
+		if mouseX >= sumX && mouseY >= 0 && mouseX <= sumX+cw && mouseY <= ch {
 			if clickable, ok := c.(Clickable); ok {
 				clickable.HandleClick(mouseX-sumX, mouseY)
 			}

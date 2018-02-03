@@ -52,7 +52,7 @@ func (b *Button) Handle(ev termbox.Event) {
 //
 func (b *Button) HandleClick(mouseX, mouseY int) {
 	//fmt.Println("button", mouseX, mouseY, b.Padding)
-	if mouseX >= b.Padding.Left() && mouseX < b.Padding.Left()+len(b.Text) && mouseY >= 0 && mouseY < 3 {
+	if mouseX >= 0 && mouseX < b.Padding.Left()+len(b.Text)+b.Padding.Right() && mouseY >= 0 && mouseY < 3 {
 		if b.Submit != nil {
 			b.Submit()
 		}

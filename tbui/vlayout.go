@@ -8,8 +8,10 @@ import (
 type VLayout struct {
 	Children []Element
 
-	Border  Border
-	Padding Padding
+	MinWidth  int
+	MinHeight int
+	Border    Border
+	Padding   Padding
 }
 
 //
@@ -46,6 +48,13 @@ func (vl *VLayout) Size() (int, int) {
 
 	if vl.Border != None {
 		bdr = 2
+	}
+
+	if maxX < vl.MinWidth {
+		maxX = vl.MinWidth
+	}
+	if cumulativeY < vl.MinHeight {
+		cumulativeY = vl.MinHeight
 	}
 
 	cumulativeY += (vl.Padding.Up() + vl.Padding.Down()) + bdr
@@ -142,7 +151,7 @@ func (vl *VLayout) FocusClicked(mouseX, mouseY int) Focusable {
 	for _, c := range vl.Children {
 		var cw, ch int = c.Size()
 
-		if mouseX > 0 && mouseY > sumY && mouseX <= cw && mouseY <= sumY+ch {
+		if mouseX >= 0 && mouseY >= sumY && mouseX < cw && mouseY < sumY+ch {
 			if clickable, ok := c.(Clickable); ok {
 				clickable.HandleClick(mouseX, mouseY-sumY)
 			}
