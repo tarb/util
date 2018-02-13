@@ -8,7 +8,7 @@ import (
 type Text struct {
 	Width   int
 	Text    string
-	Allign  Allign
+	Align   Align
 	Padding Padding
 }
 
@@ -20,9 +20,9 @@ func (t *Text) Draw(x, y int, focused Element) {
 	}
 	x, y = x+t.Padding.Left(), y+t.Padding.Up()
 
-	if t.Allign == Right {
+	if t.Align == AlignRight {
 		x += (t.Width - w)
-	} else if t.Allign == Center {
+	} else if t.Align == AlignCenter {
 		x += ((t.Width - w) / 2)
 	}
 

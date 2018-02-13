@@ -6,41 +6,52 @@ import (
 
 //
 type DynamicList struct {
-	Bind     func(int) Element
-	BindSize func() int
-	Height   int
-	Padding  Padding
-
-	selectedIdx int
-	windowIdx   int
+	BindBuilder func(int) Element
+	BindSize    func() int
+	BindIndex   *int
+	Index       int
+	WindowIndex int
+	Height      int
+	OnChange    func(int)
 }
 
 //
 func (dl *DynamicList) Draw(x, y int, focus Element) {
-	var eX, eY int = x + dl.Padding.Left(), y + dl.Padding.Up()
+	var eX, eY int = x, y
 	var sumH int
 
-	for i := dl.windowIdx; i < dl.BindSize(); i++ {
-		var e = dl.Bind(i)
-		var eH int
+	for i := dl.WindowIndex; i < dl.BindSize(); i++ {
+		var e = dl.BindBuilder(i)
 
-		if ex, ok := e.(Expandable); ok && e == dl.Bind(dl.selectedIdx) {
-			_, eH = ex.ExpandSize()
-		} else {
-			_, eH = e.Size()
+		var listFocus Element
+		if i == dl.Index {
+			listFocus = e
 		}
 
-		if sumH+eH >= dl.Height {
+		var draw func(int, int, Element)
+		var size func() (int, int)
+		if ex, ok := e.(Expandable); ok && listFocus != nil {
+			size = ex.ExpandSize
+			draw = ex.ExpandDraw
+		} else {
+			size = e.Size
+			draw = e.Draw
+		}
+
+		var eH int
+		_, eH = size()
+
+		if sumH+eH > dl.Height {
 			break
 		}
 
 		// if container is active list item, grab first focusable element inside
-		var listFocus Element = dl.Bind(dl.selectedIdx)
-		if cont, ok := listFocus.(Container); ok {
+
+		if cont, ok := e.(Container); ok {
 			listFocus = cont.NextFocusable(nil)
 		}
 
-		e.Draw(eX, eY, listFocus)
+		draw(eX, eY, listFocus)
 		eY, sumH = eY+eH, sumH+eH
 	}
 }
@@ -49,11 +60,11 @@ func (dl *DynamicList) Draw(x, y int, focus Element) {
 func (dl *DynamicList) Size() (int, int) {
 	var maxX, sumY int
 
-	for i := dl.windowIdx; i < dl.BindSize(); i++ {
-		var e = dl.Bind(i)
+	for i := dl.WindowIndex; i < dl.BindSize(); i++ {
+		var e = dl.BindBuilder(i)
 
 		var eW, eH int
-		if ex, ok := e.(Expandable); ok && e == dl.Bind(dl.selectedIdx) {
+		if ex, ok := e.(Expandable); ok && i == dl.Index {
 			eW, eH = ex.ExpandSize()
 		} else {
 			eW, eH = e.Size()
@@ -68,9 +79,7 @@ func (dl *DynamicList) Size() (int, int) {
 		}
 	}
 
-	maxX += (dl.Padding.Left() + dl.Padding.Right())
-
-	return maxX, dl.Padding.Up() + dl.Height + dl.Padding.Down()
+	return maxX, dl.Height
 }
 
 //
@@ -81,7 +90,7 @@ func (dl *DynamicList) Handle(ev termbox.Event) {
 		dl.scrollDown()
 	} else {
 		// pass event on to the next focusable thing in the item
-		var e = dl.Bind(dl.selectedIdx)
+		var e = dl.BindBuilder(dl.Index)
 		if cont, ok := e.(Container); ok {
 			if foc := cont.NextFocusable(nil); foc != nil {
 				foc.Handle(ev)
@@ -95,15 +104,13 @@ func (dl *DynamicList) Handle(ev termbox.Event) {
 //
 func (dl *DynamicList) HandleClick(mouseX, mouseY int) {
 	// fmt.Println("list", mouseX, mouseY)
-	mouseX, mouseY = mouseX-dl.Padding.Left(), mouseY-dl.Padding.Up()
-
 	var sumY int
 
-	for i := dl.windowIdx; i < dl.BindSize(); i++ {
-		var e = dl.Bind(i)
+	for i := dl.WindowIndex; i < dl.BindSize(); i++ {
+		var e = dl.BindBuilder(i)
 
 		var cw, ch int
-		if ex, ok := e.(Expandable); ok && i == dl.selectedIdx {
+		if ex, ok := e.(Expandable); ok && i == dl.Index {
 			cw, ch = ex.ExpandSize()
 		} else {
 			cw, ch = e.Size()
@@ -116,13 +123,20 @@ func (dl *DynamicList) HandleClick(mouseX, mouseY int) {
 			if cont, ok := e.(Container); ok {
 				cont.FocusClicked(mouseX, mouseY-sumY)
 			}
-			dl.selectedIdx = dl.windowIdx + i
 
-			// scroll the windowIdx clicked on top|bottom element (if possible)
-			if i == 0 && dl.windowIdx > 0 {
-				dl.windowIdx--
-			} else if dl.selectedIdx > dl.windowIdx+dl.visibleItems()-2 && dl.windowIdx+dl.visibleItems() < dl.BindSize() {
-				dl.windowIdx++
+			if dl.OnChange != nil && dl.Index != i { // fire registered onChange
+				dl.OnChange(i)
+			}
+			if dl.BindIndex != nil { // update bound index
+				*dl.BindIndex = i
+			}
+			dl.Index = i
+
+			// scroll the WindowIndex clicked on top|bottom element (if possible)
+			if i == dl.WindowIndex && dl.WindowIndex > 0 {
+				dl.WindowIndex--
+			} else if dl.Index > dl.WindowIndex+dl.visibleItems()-2 && dl.WindowIndex+dl.visibleItems() < dl.BindSize() {
+				dl.WindowIndex++
 			}
 
 			return
@@ -136,20 +150,26 @@ func (dl *DynamicList) HandleClick(mouseX, mouseY int) {
 func (dl *DynamicList) scrollDown() {
 	var lastIndex = dl.BindSize() - 1
 
-	if dl.selectedIdx < lastIndex {
-		dl.selectedIdx++
+	if dl.Index < lastIndex {
+		dl.Index++
+		if dl.BindIndex != nil {
+			*dl.BindIndex = dl.Index
+		}
+		if dl.OnChange != nil { // fire registered onChange
+			dl.OnChange(dl.Index)
+		}
 
-		var idx = dl.selectedIdx
+		var idx = dl.Index
 		if idx < lastIndex {
 			idx++
 		}
 
 		var sumY int
 		for i := idx; i >= 0; i-- {
-			var e = dl.Bind(i)
+			var e = dl.BindBuilder(i)
 
 			var eh int
-			if ex, ok := e.(Expandable); ok && i == dl.selectedIdx {
+			if ex, ok := e.(Expandable); ok && i == dl.Index {
 				_, eh = ex.ExpandSize()
 			} else {
 				_, eh = e.Size()
@@ -157,10 +177,10 @@ func (dl *DynamicList) scrollDown() {
 			sumY += eh
 
 			if sumY >= dl.Height {
-				dl.windowIdx = i + 1
+				dl.WindowIndex = i + 1
 				break
 			}
-			if i == dl.windowIdx {
+			if i == dl.WindowIndex {
 				break
 			}
 		}
@@ -169,11 +189,17 @@ func (dl *DynamicList) scrollDown() {
 
 //
 func (dl *DynamicList) scrollUp() {
-	if dl.selectedIdx > 0 {
-		dl.selectedIdx--
+	if dl.Index > 0 {
+		dl.Index--
+		if dl.BindIndex != nil {
+			*dl.BindIndex = dl.Index
+		}
+		if dl.OnChange != nil { // fire registered onChange
+			dl.OnChange(dl.Index)
+		}
 
-		if dl.selectedIdx == dl.windowIdx && dl.selectedIdx != 0 {
-			dl.windowIdx--
+		if dl.Index == dl.WindowIndex && dl.Index != 0 {
+			dl.WindowIndex--
 		}
 	}
 }
@@ -182,11 +208,11 @@ func (dl *DynamicList) scrollUp() {
 func (dl *DynamicList) visibleItems() int {
 	var sumY, count int
 
-	for i := dl.windowIdx; i < dl.BindSize(); i++ {
-		var e = dl.Bind(i)
+	for i := dl.WindowIndex; i < dl.BindSize(); i++ {
+		var e = dl.BindBuilder(i)
 
 		var _, ch int
-		if ex, ok := e.(Expandable); ok && i == dl.selectedIdx {
+		if ex, ok := e.(Expandable); ok && i == dl.Index {
 			_, ch = ex.ExpandSize()
 		} else {
 			_, ch = e.Size()

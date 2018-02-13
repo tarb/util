@@ -24,15 +24,15 @@ func (eb *EditBox) Draw(x, y int, focused Element) {
 
 	//draw background box
 	for i := -eb.Padding.Left(); i < eb.Width+eb.Padding.Right(); i++ {
-		termbox.SetCell(x+i, y-1, '▄', termbox.ColorBlack, termbox.ColorDefault)
-		termbox.SetCell(x+i, y, ' ', termbox.ColorBlack, termbox.ColorBlack)
-		termbox.SetCell(x+i, y+1, '▀', termbox.ColorBlack, termbox.ColorDefault)
+		termbox.SetCell(x+i, y-1, '▄', termbox.ColorBlack|termbox.AttrBold, termbox.ColorDefault)
+		termbox.SetCell(x+i, y, ' ', termbox.ColorBlack|termbox.AttrBold, termbox.ColorBlack|termbox.AttrBold)
+		termbox.SetCell(x+i, y+1, '▀', termbox.ColorBlack|termbox.AttrBold, termbox.ColorDefault)
 	}
 
 	//placeholder text
 	if len(eb.text) == 0 && focused != eb {
 		for i, c := range eb.PlaceHolder {
-			termbox.SetCell(x+i, y, c, termbox.ColorDefault, termbox.ColorBlack)
+			termbox.SetCell(x+i, y, c, termbox.ColorDefault, termbox.ColorBlack|termbox.AttrBold)
 		}
 	}
 
@@ -61,9 +61,9 @@ func (eb *EditBox) Draw(x, y int, focused Element) {
 		}
 
 		if i+start == eb.cursorIdx && focused == eb {
-			termbox.SetCell(x+i, y, c, termbox.ColorBlack, termbox.ColorWhite)
+			termbox.SetCell(x+i, y, c, termbox.ColorBlack|termbox.AttrBold, termbox.ColorWhite)
 		} else {
-			termbox.SetCell(x+i, y, c, termbox.ColorDefault, termbox.ColorBlack)
+			termbox.SetCell(x+i, y, c, termbox.ColorDefault, termbox.ColorBlack|termbox.AttrBold)
 		}
 	}
 

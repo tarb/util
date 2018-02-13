@@ -12,6 +12,7 @@ type Element interface {
 type Expandable interface {
 	Element
 	ExpandSize() (int, int)
+	ExpandDraw(int, int, Element)
 }
 
 //

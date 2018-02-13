@@ -16,26 +16,20 @@ type HLayout struct {
 
 //
 func (hl *HLayout) Draw(x, y int, focused Element) {
-	// border offset
-	var bdr int
-	if hl.Border != None {
-		bdr = 1
-		hl.drawBorder(x, y)
-	}
-
 	// x and y to start drawing children
-	var eX, eY int = x + hl.Padding.Left() + bdr, y + hl.Padding.Up() + bdr
+	var eX, eY int = x + hl.Padding.Left() + hl.Border.Adjust(Left), y + hl.Padding.Up() + hl.Border.Adjust(Up)
 
 	for _, e := range hl.Children {
-		var eWidth, _ int = e.Size()
 		e.Draw(eX, eY, focused)
+		var eWidth, _ int = e.Size()
 		eX += eWidth
 	}
+	hl.drawBorder(x, y)
 }
 
 //
 func (hl *HLayout) Size() (int, int) {
-	var cumulativeX, maxY, bdr int
+	var cumulativeX, maxY int
 
 	for _, e := range hl.Children {
 		var w, h int = e.Size()
@@ -46,10 +40,6 @@ func (hl *HLayout) Size() (int, int) {
 		}
 	}
 
-	if hl.Border != None {
-		bdr = 2
-	}
-
 	if cumulativeX < hl.MinWidth {
 		cumulativeX = hl.MinWidth
 	}
@@ -57,8 +47,8 @@ func (hl *HLayout) Size() (int, int) {
 		maxY = hl.MinHeight
 	}
 
-	cumulativeX += (hl.Padding.Left() + hl.Padding.Right()) + bdr
-	maxY += (hl.Padding.Up() + hl.Padding.Down()) + bdr
+	cumulativeX += hl.Padding.Left() + hl.Padding.Right() + hl.Border.Adjust(Left) + hl.Border.Adjust(Right)
+	maxY += hl.Padding.Up() + hl.Padding.Down() + hl.Border.Adjust(Up) + hl.Border.Adjust(Down)
 
 	return cumulativeX, maxY
 }
@@ -69,24 +59,46 @@ func (hl *HLayout) Size() (int, int) {
 // }
 
 func (hl *HLayout) drawBorder(x, y int) {
-	var runes []rune = borderRunes[hl.Border]
+	var runes []rune = hl.Border.Runes()
+	var fg, bg = hl.Border.Fg, hl.Border.Bg
 	var w, h int = hl.Size()
 
 	// x
-	for i := x + 1; i < x+w-1; i++ {
-		termbox.SetCell(i, y, runes[0], termbox.ColorDefault, termbox.ColorDefault)
-		termbox.SetCell(i, y+h-1, runes[0], termbox.ColorDefault, termbox.ColorDefault)
+	if hl.Border.Has(Up) {
+		for i := x; i < x+w; i++ {
+			termbox.SetCell(i, y, runes[0], fg, bg)
+		}
+	}
+	if hl.Border.Has(Down) {
+		for i := x; i < x+w; i++ {
+			termbox.SetCell(i, y+h-1, runes[0], fg, bg)
+		}
 	}
 	// y
-	for i := y + 1; i < y+h-1; i++ {
-		termbox.SetCell(x, i, runes[1], termbox.ColorDefault, termbox.ColorDefault)
-		termbox.SetCell(x+w-1, i, runes[1], termbox.ColorDefault, termbox.ColorDefault)
+	if hl.Border.Has(Left) {
+		for i := y; i < y+h; i++ {
+			termbox.SetCell(x, i, runes[1], fg, bg)
+		}
 	}
+	if hl.Border.Has(Right) {
+		for i := y; i < y+h; i++ {
+			termbox.SetCell(x+w-1, i, runes[1], fg, bg)
+		}
+	}
+
 	// corners
-	termbox.SetCell(x, y, runes[2], termbox.ColorDefault, termbox.ColorDefault)
-	termbox.SetCell(x+w-1, y, runes[3], termbox.ColorDefault, termbox.ColorDefault)
-	termbox.SetCell(x, y+h-1, runes[4], termbox.ColorDefault, termbox.ColorDefault)
-	termbox.SetCell(x+w-1, y+h-1, runes[5], termbox.ColorDefault, termbox.ColorDefault)
+	if hl.Border.Has(Left | Up) {
+		termbox.SetCell(x, y, runes[2], fg, bg)
+	}
+	if hl.Border.Has(Left | Down) {
+		termbox.SetCell(x, y+h-1, runes[4], fg, bg)
+	}
+	if hl.Border.Has(Right | Up) {
+		termbox.SetCell(x+w-1, y, runes[3], fg, bg)
+	}
+	if hl.Border.Has(Right | Down) {
+		termbox.SetCell(x+w-1, y+h-1, runes[5], fg, bg)
+	}
 }
 
 //
@@ -136,7 +148,7 @@ func (hl *HLayout) NextFocusable(current Focusable) Focusable {
 
 //
 func (hl *HLayout) FocusClicked(mouseX, mouseY int) Focusable {
-	var w, h int = hl.Size()
+	// var w, h int = hl.Size()
 
 	// termbox uses coords based from 1, 1 not 0, 0
 	// keep it consistent for bubbling through containers
@@ -151,13 +163,8 @@ func (hl *HLayout) FocusClicked(mouseX, mouseY int) Focusable {
 	// passed down to children
 
 	// adjust for padding
-	mouseX, mouseY = mouseX-hl.Padding.Left(), mouseY-hl.Padding.Up()
-	w, h = w-(hl.Padding.Left()+hl.Padding.Right()), h-(hl.Padding.Up()+hl.Padding.Down())
-	// adjust for border
-	if hl.Border != None {
-		mouseX, mouseY = mouseX-1, mouseY-1
-		w, h = w-2, h-2
-	}
+	mouseX, mouseY = mouseX-hl.Padding.Left()-hl.Border.Adjust(Left), mouseY-hl.Padding.Up()-hl.Border.Adjust(Up)
+	// w, h = w-(hl.Padding.Left()+hl.Padding.Right())-(hl.Border.Left()+hl.Border.Right()), h-(hl.Padding.Up()+hl.Padding.Down())-(hl.Border.Up()+hl.Border.Down())
 
 	var sumX int
 	for _, c := range hl.Children {

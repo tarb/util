@@ -3,31 +3,70 @@ package tbui
 import termbox "github.com/nsf/termbox-go"
 
 //
-type Border int
+type BorderSide uint8
 
 //
 const (
-	None   Border = 0
-	Thin   Border = 1
-	Thick  Border = 2
-	Double Border = 3
+	None      BorderSide = 0
+	Up        BorderSide = 2
+	Right     BorderSide = 4
+	Down      BorderSide = 8
+	Left      BorderSide = 16
+	UpDown    BorderSide = Up | Down
+	LeftRight BorderSide = Left | Right
+	All       BorderSide = Up | Right | Down | Left
 )
 
-var borderRunes = [][]rune{
-	nil,
+//
+type BorderType int
+
+//
+const (
+	Empty  BorderType = 0
+	Thin   BorderType = 1
+	Thick  BorderType = 2
+	Double BorderType = 3
+)
+
+var borderTypes = [][]rune{
+	[]rune{' ', ' ', ' ', ' ', ' ', ' '},
 	[]rune{'─', '│', '┌', '┐', '└', '┘'},
 	[]rune{'━', '┃', '┏', '┓', '┗', '┛'},
 	[]rune{'═', '║', '╔', '╗', '╚', '╝'},
 }
 
 //
-type Allign uint
+type Border struct {
+	Side  BorderSide
+	Style BorderType
+	Fg    termbox.Attribute
+	Bg    termbox.Attribute
+}
+
+//
+func (b Border) Adjust(bs BorderSide) int {
+	if b.Side&bs > 0 {
+		return 1
+	}
+	return 0
+}
+
+//
+func (b Border) Has(bs BorderSide) bool { return b.Side&bs == bs }
+
+//
+func (b Border) Runes() []rune {
+	return borderTypes[b.Style]
+}
+
+//
+type Align uint
 
 //
 const (
-	Left   Allign = 0
-	Center Allign = 1
-	Right  Allign = 2
+	AlignLeft   Align = 0
+	AlignCenter Align = 1
+	AlignRight  Align = 2
 )
 
 //

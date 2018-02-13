@@ -16,26 +16,20 @@ type VLayout struct {
 
 //
 func (vl *VLayout) Draw(x, y int, focused Element) {
-	// border offset
-	var bdr int
-	if vl.Border != None {
-		bdr = 1
-		vl.drawBorder(x, y)
-	}
-
 	// x and y to start drawing children
-	var eX, eY int = x + vl.Padding.Left() + bdr, y + vl.Padding.Up() + bdr
+	var eX, eY int = x + vl.Padding.Left() + vl.Border.Adjust(Left), y + vl.Padding.Up() + vl.Border.Adjust(Up)
 
 	for _, e := range vl.Children {
-		var _, eHeight int = e.Size()
 		e.Draw(eX, eY, focused)
+		var _, eHeight int = e.Size()
 		eY += eHeight
 	}
+	vl.drawBorder(x, y)
 }
 
 //
 func (vl *VLayout) Size() (int, int) {
-	var cumulativeY, maxX, bdr int
+	var cumulativeY, maxX int
 
 	for _, e := range vl.Children {
 		var w, h int = e.Size()
@@ -46,10 +40,6 @@ func (vl *VLayout) Size() (int, int) {
 		}
 	}
 
-	if vl.Border != None {
-		bdr = 2
-	}
-
 	if maxX < vl.MinWidth {
 		maxX = vl.MinWidth
 	}
@@ -57,8 +47,8 @@ func (vl *VLayout) Size() (int, int) {
 		cumulativeY = vl.MinHeight
 	}
 
-	cumulativeY += (vl.Padding.Up() + vl.Padding.Down()) + bdr
-	maxX += (vl.Padding.Left() + vl.Padding.Right()) + bdr
+	cumulativeY += vl.Padding.Up() + vl.Padding.Down() + vl.Border.Adjust(Up) + vl.Border.Adjust(Down)
+	maxX += vl.Padding.Left() + vl.Padding.Right() + vl.Border.Adjust(Left) + vl.Border.Adjust(Right)
 
 	return maxX, cumulativeY
 }
@@ -68,26 +58,47 @@ func (vl *VLayout) Size() (int, int) {
 // 	fmt.Println("vlayout", vl.Border, "|", mouseX, mouseY, vl.Padding)
 // }
 
-//
 func (vl *VLayout) drawBorder(x, y int) {
-	var runes []rune = borderRunes[vl.Border]
+	var runes []rune = vl.Border.Runes()
+	var fg, bg = vl.Border.Fg, vl.Border.Bg
 	var w, h int = vl.Size()
 
 	// x
-	for i := x + 1; i < x+w-1; i++ {
-		termbox.SetCell(i, y, runes[0], termbox.ColorDefault, termbox.ColorDefault)
-		termbox.SetCell(i, y+h-1, runes[0], termbox.ColorDefault, termbox.ColorDefault)
+	if vl.Border.Has(Up) {
+		for i := x; i < x+w; i++ {
+			termbox.SetCell(i, y, runes[0], fg, bg)
+		}
+	}
+	if vl.Border.Has(Down) {
+		for i := x; i < x+w; i++ {
+			termbox.SetCell(i, y+h-1, runes[0], fg, bg)
+		}
 	}
 	// y
-	for i := y + 1; i < y+h-1; i++ {
-		termbox.SetCell(x, i, runes[1], termbox.ColorDefault, termbox.ColorDefault)
-		termbox.SetCell(x+w-1, i, runes[1], termbox.ColorDefault, termbox.ColorDefault)
+	if vl.Border.Has(Left) {
+		for i := y; i < y+h; i++ {
+			termbox.SetCell(x, i, runes[1], fg, bg)
+		}
 	}
+	if vl.Border.Has(Right) {
+		for i := y; i < y+h; i++ {
+			termbox.SetCell(x+w-1, i, runes[1], fg, bg)
+		}
+	}
+
 	// corners
-	termbox.SetCell(x, y, runes[2], termbox.ColorDefault, termbox.ColorDefault)
-	termbox.SetCell(x+w-1, y, runes[3], termbox.ColorDefault, termbox.ColorDefault)
-	termbox.SetCell(x, y+h-1, runes[4], termbox.ColorDefault, termbox.ColorDefault)
-	termbox.SetCell(x+w-1, y+h-1, runes[5], termbox.ColorDefault, termbox.ColorDefault)
+	if vl.Border.Has(Left | Up) {
+		termbox.SetCell(x, y, runes[2], fg, bg)
+	}
+	if vl.Border.Has(Left | Down) {
+		termbox.SetCell(x, y+h-1, runes[4], fg, bg)
+	}
+	if vl.Border.Has(Right | Up) {
+		termbox.SetCell(x+w-1, y, runes[3], fg, bg)
+	}
+	if vl.Border.Has(Right | Down) {
+		termbox.SetCell(x+w-1, y+h-1, runes[5], fg, bg)
+	}
 }
 
 //
@@ -136,16 +147,11 @@ func (vl *VLayout) NextFocusable(current Focusable) Focusable {
 
 //
 func (vl *VLayout) FocusClicked(mouseX, mouseY int) Focusable {
-	var w, h int = vl.Size()
+	// var w, h int = vl.Size()
 
 	// adjust for padding
-	mouseX, mouseY = mouseX-vl.Padding.Left(), mouseY-vl.Padding.Up()
-	w, h = w-(vl.Padding.Left()+vl.Padding.Right()), h-(vl.Padding.Up()+vl.Padding.Down())
-	// adjust for border
-	if vl.Border != None {
-		mouseX, mouseY = mouseX-1, mouseY-1
-		w, h = w-2, h-2
-	}
+	mouseX, mouseY = mouseX-vl.Padding.Left()-vl.Border.Adjust(Left), mouseY-vl.Padding.Up()-vl.Border.Adjust(Up)
+	// w, h = w-(vl.Padding.Left()+vl.Padding.Right()), h-(vl.Padding.Up()+vl.Padding.Down())
 
 	var sumY int
 	for _, c := range vl.Children {
