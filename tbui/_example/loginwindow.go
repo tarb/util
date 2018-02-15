@@ -57,7 +57,7 @@ func NewLoginWindow(submit func(string, string, bool) (string, error)) *LoginWin
 			}, Padding: ui.Padding{2, 0, 0, 7}},
 		},
 		Padding: ui.Padding{1, 2},
-		Border:  ui.Thin,
+		Border:  ui.Border{Style: ui.Thin, Side: ui.All, Bg: termbox.ColorBlack | termbox.AttrBold},
 	}
 	return &lw
 }
@@ -128,7 +128,7 @@ func (lw *LoginWindow) Listen() {
 
 			// LoginResult has come back
 			case msg := <-notify:
-				lw.notice.Children = []ui.Element{&ui.Text{Text: msg, Width: 28, Allign: ui.Center}}
+				lw.notice.Children = []ui.Element{&ui.Text{Text: msg, Width: 28, Align: ui.AlignCenter}}
 				schedPaint()
 
 			// User has fired event
@@ -137,7 +137,8 @@ func (lw *LoginWindow) Listen() {
 				case termbox.EventMouse:
 					if ev.Key == termbox.MouseLeft {
 						var xOffset, yOffset int = centerPos()
-						lw.focus = lw.root.FocusClicked(ev.MouseX-xOffset, ev.MouseY-yOffset)
+						ev.MouseX, ev.MouseY = ev.MouseX-xOffset, ev.MouseY-yOffset
+						lw.focus = lw.root.FocusClicked(ev)
 						schedPaint()
 					}
 				case termbox.EventKey:

@@ -147,7 +147,7 @@ func (hl *HLayout) NextFocusable(current Focusable) Focusable {
 }
 
 //
-func (hl *HLayout) FocusClicked(mouseX, mouseY int) Focusable {
+func (hl *HLayout) FocusClicked(ev termbox.Event) Focusable {
 	// var w, h int = hl.Size()
 
 	// termbox uses coords based from 1, 1 not 0, 0
@@ -163,19 +163,23 @@ func (hl *HLayout) FocusClicked(mouseX, mouseY int) Focusable {
 	// passed down to children
 
 	// adjust for padding
-	mouseX, mouseY = mouseX-hl.Padding.Left()-hl.Border.Adjust(Left), mouseY-hl.Padding.Up()-hl.Border.Adjust(Up)
+	ev.MouseX, ev.MouseY = ev.MouseX-hl.Padding.Left()-hl.Border.Adjust(Left), ev.MouseY-hl.Padding.Up()-hl.Border.Adjust(Up)
 	// w, h = w-(hl.Padding.Left()+hl.Padding.Right())-(hl.Border.Left()+hl.Border.Right()), h-(hl.Padding.Up()+hl.Padding.Down())-(hl.Border.Up()+hl.Border.Down())
 
 	var sumX int
 	for _, c := range hl.Children {
 		var cw, ch int = c.Size()
 
-		if mouseX >= sumX && mouseY >= 0 && mouseX <= sumX+cw && mouseY <= ch {
+		if ev.MouseX >= sumX && ev.MouseY >= 0 && ev.MouseX <= sumX+cw && ev.MouseY <= ch {
+			// update event before passing it down
+			ev.MouseX -= sumX
+
 			if clickable, ok := c.(Clickable); ok {
-				clickable.HandleClick(mouseX-sumX, mouseY)
+				clickable.HandleClick(ev)
 			}
+
 			if cont, ok := c.(Container); ok {
-				return cont.FocusClicked(mouseX-sumX, mouseY)
+				return cont.FocusClicked(ev)
 			} else if foc, ok := c.(Focusable); ok {
 				return foc
 			}

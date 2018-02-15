@@ -1,5 +1,7 @@
 package tbui
 
+import termbox "github.com/nsf/termbox-go"
+
 //
 type If struct {
 	Child Element
@@ -62,13 +64,13 @@ func (ifl *If) NextFocusable(current Focusable) Focusable {
 }
 
 //
-func (ifl *If) FocusClicked(mouseX, mouseY int) Focusable {
+func (ifl *If) FocusClicked(ev termbox.Event) Focusable {
 	if ifl.Cond() {
 		if clickable, ok := ifl.Child.(Clickable); ok {
-			clickable.HandleClick(mouseX, mouseY)
+			clickable.HandleClick(ev)
 		}
 		if cont, ok := ifl.Child.(Container); ok {
-			return cont.FocusClicked(mouseX, mouseY)
+			return cont.FocusClicked(ev)
 		} else if foc, ok := ifl.Child.(Focusable); ok {
 			return foc
 		}

@@ -24,7 +24,7 @@ type Focusable interface {
 //
 type Clickable interface {
 	Element
-	HandleClick(int, int)
+	HandleClick(termbox.Event)
 }
 
 //
@@ -32,5 +32,5 @@ type Container interface {
 	Element
 	NextFocusable(Focusable) Focusable
 	GetFocusable() []Focusable
-	FocusClicked(int, int) Focusable
+	FocusClicked(termbox.Event) Focusable
 }

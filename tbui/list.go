@@ -80,9 +80,9 @@ func (l *List) Handle(ev termbox.Event) {
 }
 
 //
-func (l *List) HandleClick(mouseX, mouseY int) {
+func (l *List) HandleClick(ev termbox.Event) {
 	// fmt.Println("list", mouseX, mouseY)
-	mouseX, mouseY = mouseX-l.Padding.Left(), mouseY-l.Padding.Up()
+	ev.MouseX, ev.MouseY = ev.MouseX-l.Padding.Left(), ev.MouseY-l.Padding.Up()
 
 	var sumY int
 	for i, c := range l.Items[l.windowIdx:] {
@@ -93,12 +93,14 @@ func (l *List) HandleClick(mouseX, mouseY int) {
 			cw, ch = c.Size()
 		}
 
-		if mouseX >= 0 && mouseY >= sumY && mouseX < cw && mouseY < sumY+ch {
+		if ev.MouseX >= 0 && ev.MouseY >= sumY && ev.MouseX < cw && ev.MouseY < sumY+ch {
+			ev.MouseY -= sumY
+
 			if clickable, ok := c.(Clickable); ok {
-				clickable.HandleClick(mouseX, mouseY-sumY)
+				clickable.HandleClick(ev)
 			}
 			if cont, ok := c.(Container); ok {
-				cont.FocusClicked(mouseX, mouseY-sumY)
+				cont.FocusClicked(ev)
 			}
 			l.selectedIdx = l.windowIdx + i
 

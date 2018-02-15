@@ -146,23 +146,26 @@ func (vl *VLayout) NextFocusable(current Focusable) Focusable {
 }
 
 //
-func (vl *VLayout) FocusClicked(mouseX, mouseY int) Focusable {
+func (vl *VLayout) FocusClicked(ev termbox.Event) Focusable {
 	// var w, h int = vl.Size()
 
 	// adjust for padding
-	mouseX, mouseY = mouseX-vl.Padding.Left()-vl.Border.Adjust(Left), mouseY-vl.Padding.Up()-vl.Border.Adjust(Up)
+	ev.MouseX, ev.MouseY = ev.MouseX-vl.Padding.Left()-vl.Border.Adjust(Left), ev.MouseY-vl.Padding.Up()-vl.Border.Adjust(Up)
 	// w, h = w-(vl.Padding.Left()+vl.Padding.Right()), h-(vl.Padding.Up()+vl.Padding.Down())
 
 	var sumY int
 	for _, c := range vl.Children {
 		var cw, ch int = c.Size()
 
-		if mouseX >= 0 && mouseY >= sumY && mouseX < cw && mouseY < sumY+ch {
+		if ev.MouseX >= 0 && ev.MouseY >= sumY && ev.MouseX < cw && ev.MouseY < sumY+ch {
+
+			ev.MouseY -= sumY
+
 			if clickable, ok := c.(Clickable); ok {
-				clickable.HandleClick(mouseX, mouseY-sumY)
+				clickable.HandleClick(ev)
 			}
 			if cont, ok := c.(Container); ok {
-				return cont.FocusClicked(mouseX, mouseY-sumY)
+				return cont.FocusClicked(ev)
 			} else if foc, ok := c.(Focusable); ok {
 				return foc
 			}

@@ -102,48 +102,68 @@ func (dl *DynamicList) Handle(ev termbox.Event) {
 }
 
 //
-func (dl *DynamicList) HandleClick(mouseX, mouseY int) {
-	// fmt.Println("list", mouseX, mouseY)
-	var sumY int
+func (dl *DynamicList) HandleClick(ev termbox.Event) {
+	// fmt.Println("list", ev.MouseX, ev.MouseY)
 
-	for i := dl.WindowIndex; i < dl.BindSize(); i++ {
-		var e = dl.BindBuilder(i)
-
-		var cw, ch int
-		if ex, ok := e.(Expandable); ok && i == dl.Index {
-			cw, ch = ex.ExpandSize()
-		} else {
-			cw, ch = e.Size()
+	switch ev.Key {
+	case termbox.MouseWheelDown:
+		if dl.WindowIndex+dl.visibleItems() < dl.BindSize() {
+			dl.WindowIndex++
 		}
 
-		if mouseX >= 0 && mouseY >= sumY && mouseX < cw && mouseY < sumY+ch {
-			if clickable, ok := e.(Clickable); ok {
-				clickable.HandleClick(mouseX, mouseY-sumY)
-			}
-			if cont, ok := e.(Container); ok {
-				cont.FocusClicked(mouseX, mouseY-sumY)
-			}
-
-			if dl.OnChange != nil && dl.Index != i { // fire registered onChange
-				dl.OnChange(i)
-			}
-			if dl.BindIndex != nil { // update bound index
-				*dl.BindIndex = i
-			}
-			dl.Index = i
-
-			// scroll the WindowIndex clicked on top|bottom element (if possible)
-			if i == dl.WindowIndex && dl.WindowIndex > 0 {
-				dl.WindowIndex--
-			} else if dl.Index > dl.WindowIndex+dl.visibleItems()-2 && dl.WindowIndex+dl.visibleItems() < dl.BindSize() {
-				dl.WindowIndex++
-			}
-
-			return
+	case termbox.MouseWheelUp:
+		if dl.WindowIndex > 0 {
+			dl.WindowIndex--
 		}
 
-		sumY += ch
+	case termbox.MouseLeft:
+		var sumY int
+
+		for i := dl.WindowIndex; i < dl.BindSize(); i++ {
+			var e = dl.BindBuilder(i)
+
+			var cw, ch int
+			if ex, ok := e.(Expandable); ok && i == dl.Index {
+				cw, ch = ex.ExpandSize()
+			} else {
+				cw, ch = e.Size()
+			}
+
+			if ev.MouseX >= 0 && ev.MouseY >= sumY && ev.MouseX < cw && ev.MouseY < sumY+ch {
+
+				// adjust the event before passing it down
+				ev.MouseY -= sumY
+
+				if clickable, ok := e.(Clickable); ok {
+					clickable.HandleClick(ev)
+				}
+				if cont, ok := e.(Container); ok {
+					cont.FocusClicked(ev)
+				}
+
+				// fire events and update bindings
+				if dl.OnChange != nil && dl.Index != i { // fire registered onChange
+					dl.OnChange(i)
+				}
+				if dl.BindIndex != nil { // update bound index
+					*dl.BindIndex = i
+				}
+				dl.Index = i
+
+				// scroll the WindowIndex clicked on top|bottom element (if possible)
+				if i == dl.WindowIndex && dl.WindowIndex > 0 {
+					dl.WindowIndex--
+				} else if dl.Index > dl.WindowIndex+dl.visibleItems()-2 && dl.WindowIndex+dl.visibleItems() < dl.BindSize() {
+					dl.WindowIndex++
+				}
+
+				return
+			}
+			sumY += ch
+		}
+
 	}
+
 }
 
 //
