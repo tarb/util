@@ -3,6 +3,7 @@ package www
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -13,41 +14,10 @@ import (
 // it in the intended way - culminating each request in a
 // CollectX call.
 type httpCall struct {
-	err  error
-	req  *http.Request
-	resp *http.Response
-}
-
-// Get creates a new httpCall with default values and
-// using the GET http method
-func Get(urlStr string) *httpCall {
-	u, err := url.Parse(urlStr)
-
-	return &httpCall{err: err, req: newReq(http.MethodGet, u)}
-}
-
-// Post creates a new httpCall with default values and
-// using the POST http method
-func Post(urlStr string) *httpCall {
-	u, err := url.Parse(urlStr)
-
-	return &httpCall{err: err, req: newReq(http.MethodPost, u)}
-}
-
-// Build creates a custom httpCall from the given parameters;
-// scheme, host and path are used to create a new url.URL value.
-//
-// There is no validation that the method value is a correct http
-// method, suggest using contants found in http package
-// (http.MethodGet, http.MethodPost, etc)
-func Build(method, scheme, host, path string) *httpCall {
-	var u = &url.URL{
-		Scheme: scheme,
-		Host:   host,
-		Path:   path,
-	}
-
-	return &httpCall{req: newReq(method, u)}
+	err    error
+	client *http.Client
+	req    *http.Request
+	resp   *http.Response
 }
 
 // WithQuery is used to update the url query it expects a func
@@ -164,6 +134,29 @@ func (c *httpCall) CollectJSON(obj interface{}) error {
 	return c.err
 }
 
+// CollectXML finalizes the httpCall and Unmarshals the responses
+// body into the parameter value. If somewhere in the httpCall method
+// chain has returned an error, dont run the request and return the
+// error. If the request returns an error, return that error - or if
+// the responses status code is not 2--, return a new error detailing
+// the responses status
+func (c *httpCall) CollectXML(obj interface{}) error {
+	if c.do(); c.err != nil {
+		return c.err
+	}
+
+	if c.resp.StatusCode/100 == 2 {
+		c.err = xml.NewDecoder(c.resp.Body).Decode(obj)
+	} else {
+		var bs []byte
+		bs, c.err = ioutil.ReadAll(c.resp.Body)
+		c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode, Body: string(bs)}
+	}
+
+	c.resp.Body.Close()
+	return c.err
+}
+
 // CollectJSON finalizes the httpCall and returns the response body
 // as a string. If somehwere in the httpCall method
 // chain has returned an error, dont run the request and return the
@@ -205,19 +198,6 @@ func (c *httpCall) CollectResponse() (*http.Response, error) {
 	return c.resp, nil
 }
 
-// newReq builds a http.Request from the parameter values, and the
-// default headers.
-func newReq(method string, u *url.URL) *http.Request {
-	return &http.Request{
-		Method:        method,
-		URL:           u,
-		Host:          u.Host,
-		Header:        getDefaultHeaders(),
-		Body:          nil,
-		ContentLength: 0,
-	}
-}
-
 // do checks for errors in the construction of the req, and if not
 // present runs the request, storing the value and error into itself
 func (c *httpCall) do() {
@@ -227,5 +207,5 @@ func (c *httpCall) do() {
 		return
 	}
 
-	c.resp, c.err = getClient().Do(c.req)
+	c.resp, c.err = c.client.Do(c.req)
 }
