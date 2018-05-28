@@ -159,6 +159,7 @@ func (vl *VLayout) FocusClicked(ev termbox.Event) Focusable {
 
 		if ev.MouseX >= 0 && ev.MouseY >= sumY && ev.MouseX < cw && ev.MouseY < sumY+ch {
 
+			// update coords
 			ev.MouseY -= sumY
 
 			if clickable, ok := c.(Clickable); ok {

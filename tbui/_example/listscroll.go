@@ -10,7 +10,7 @@ import (
 //
 type ListExampleWindow struct {
 	focus ui.Focusable
-	root  *ui.HLayout
+	root  *ui.VLayout
 }
 
 //
@@ -19,36 +19,20 @@ func NewListExampleWindow() *ListExampleWindow {
 
 	var words = []string{"alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "gecko", "hotel", "igloo", "juliet", "kilo", "lama", "mike", "navi", "oscar", "oreo", "parrot"}
 
-	lw.root = &ui.HLayout{
+	lw.root = &ui.VLayout{
 		Children: []ui.Element{
-			&ui.VLayout{
-				Children: []ui.Element{
-					&ui.DynamicList{
-						BindBuilder: func(i int) ui.Element {
-							return &ui.Text{Text: words[i]}
-						},
-						BindSize: func() int { return len(words) },
-						Height:   10,
-					},
+			&ui.DynamicList{
+				BindBuilder: func(i int) ui.Element {
+					return &ui.Text{Text: words[i]}
 				},
-				Border:  ui.Border{Style: ui.Thin, Side: ui.All, Bg: termbox.ColorBlack | termbox.AttrBold},
-				Padding: ui.Padding{1, 2},
-			},
-			&ui.VLayout{
-				Children: []ui.Element{
-					&ui.DynamicList{
-						BindBuilder: func(i int) ui.Element {
-							return &ui.Text{Text: words[i]}
-						},
-						BindSize: func() int { return len(words) },
-						Height:   10,
-					},
-				},
-				Border:  ui.Border{Style: ui.Thin, Side: ui.All, Bg: termbox.ColorBlack | termbox.AttrBold},
-				Padding: ui.Padding{1, 2},
+				BindSize: func() int { return len(words) },
+				Height:   10,
 			},
 		},
+		Border:  ui.Border{Style: ui.Thin, Side: ui.All, Bg: termbox.ColorBlack | termbox.AttrBold},
+		Padding: ui.Padding{1, 2},
 	}
+
 	return &lw
 }
 
