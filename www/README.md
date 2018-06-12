@@ -7,14 +7,19 @@ Simple Go library for making http requests
 A simple library for making more complex http requests easier and neater. The library is designed to cut down on the boiler plate needed to create requests and presents a small set of chainable methods to build a request, followed up by a Collect- method to handle the response.
 
 
-To change which http.Client is used for all requests (from http.DefaultClient) 
+To create a new default client, using the default http client
 ```go
-SetClient( &http.Client{} )
+c := Default()
 ```
 
-Sets default values automatically used in each request
+To create a new client with custom http client
 ```go
-SetDefaultHeaders(func(h http.Header) {
+c := New(httpC)
+```
+
+Sets default values for the client - automatically used in each request
+```go
+c.SetDefaultHeaders(func(h http.Header) {
     h.Set("Header1", "Value")
     h.Set("Header2", "Value")
 })
@@ -29,7 +34,7 @@ type loginResult struct {
 
 var lResult loginResult
 
-err := Post("https://localhost/api/login").
+err := c.Post("https://localhost/api/login").
     WithFormBody(func(v url.Values) {
         v.Set("username", "USERNAME")
         v.Set("password", "PASSWORD")
@@ -40,7 +45,7 @@ err := Post("https://localhost/api/login").
 Perform a Get request with queries, a json body and extra header values
 https://google.com?q=searchterm&results=10
 ```go
-err := Build(http.MethodGet, "https", "google.com", "").
+err := c.Build(http.MethodGet, "https", "google.com", "").
     WithQuery(func(q url.Values) {
         q.Set("q","searchterm")
         q.Set("results","10")
@@ -55,4 +60,5 @@ err := Build(http.MethodGet, "https", "google.com", "").
 
 ### TODO
 
-* Explore adding a Builder type, to contain the reference to the default headers and client. This would allow the use of multiple instances of www
+More documentation 
+Comprehensive test cases
