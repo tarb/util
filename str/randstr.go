@@ -1,4 +1,4 @@
-package randstr
+package str
 
 import (
 	"math/rand"
@@ -20,8 +20,8 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-// RandString returns a random string of bytes of n length
-func RandString(n int) string {
+// Rand returns a random string of bytes of n length
+func Rand(n int) string {
 	var b = make([]byte, n)
 
 	// A rand.Int63() generates 63 random bits, enough for letterIdxMax letters!
