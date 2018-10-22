@@ -25,3 +25,27 @@ func Diff(s1, s2 []string) []string {
 
 	return diff
 }
+
+//
+func IndexSlice(s string, sl []string) int {
+	for i := range sl {
+		if sl[i] == s {
+			return i
+		}
+	}
+
+	return -1
+}
+
+//
+func Filter(sl []string, f func(string) bool) []string {
+	nl := make([]string, 0, len(sl))
+
+	for _, s := range sl {
+		if f(s) {
+			nl = append(nl, s)
+		}
+	}
+
+	return nl
+}

@@ -2,11 +2,20 @@ package www
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
+)
+
+// thrown errors
+var (
+	ErrMaxAttempts = errors.New("http request failed: max attempts reached")
 )
 
 // httpCall contains the building of the requestm abd the
@@ -15,6 +24,7 @@ import (
 // CollectX call.
 type httpCall struct {
 	err    error
+	body   []byte
 	client *http.Client
 	req    *http.Request
 	resp   *http.Response
@@ -48,12 +58,12 @@ func (c *httpCall) WithQuery(fn func(url.Values)) *httpCall {
 // This method also adds the application/json Content-Type
 // header to the request
 func (c *httpCall) WithJSONBody(jsonBody interface{}) *httpCall {
-	var bs []byte
-	bs, c.err = json.Marshal(jsonBody)
+	c.body, c.err = json.Marshal(jsonBody)
 
-	c.req.Body = ioutil.NopCloser(bytes.NewReader(bs))
-	c.req.ContentLength = int64(len(bs))
-	c.req.Header.Set("Content-Type", "application/json")
+	c.req.Body = ioutil.NopCloser(bytes.NewReader(c.body))
+	c.req.ContentLength = int64(len(c.body))
+	c.req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
 	return c
 }
 
@@ -74,10 +84,10 @@ func (c *httpCall) WithFormBody(fn func(url.Values)) *httpCall {
 	var formData = make(url.Values)
 	fn(formData)
 
-	var bs = []byte(formData.Encode())
+	c.body = []byte(formData.Encode())
 
-	c.req.Body = ioutil.NopCloser(bytes.NewReader(bs))
-	c.req.ContentLength = int64(len(bs))
+	c.req.Body = ioutil.NopCloser(bytes.NewReader(c.body))
+	c.req.ContentLength = int64(len(c.body))
 	c.req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	return c
 }
@@ -88,10 +98,10 @@ func (c *httpCall) WithFormBody(fn func(url.Values)) *httpCall {
 // This method also adds the text/plain Content-Type header to the
 // request
 func (c *httpCall) WithTextBody(body string) *httpCall {
-	var bs = []byte(body)
+	c.body = []byte(body)
 
-	c.req.Body = ioutil.NopCloser(bytes.NewReader(bs))
-	c.req.ContentLength = int64(len(bs))
+	c.req.Body = ioutil.NopCloser(bytes.NewReader(c.body))
+	c.req.ContentLength = int64(len(c.body))
 	c.req.Header.Set("Content-Type", "text/plain")
 	return c
 }
@@ -118,19 +128,18 @@ func (c *httpCall) WithHeaders(fn func(http.Header)) *httpCall {
 // the responses status code is not 2--, return a new error detailing
 // the responses status
 func (c *httpCall) CollectJSON(obj interface{}) error {
-	if c.do(); c.err != nil {
+	defer func() {
+		if c.resp != nil && c.resp.Body != nil {
+			c.resp.Body.Close()
+		}
+	}()
+
+	if c.err != nil {
 		return c.err
 	}
 
-	if c.resp.StatusCode/100 == 2 {
-		c.err = json.NewDecoder(c.resp.Body).Decode(obj)
-	} else {
-		var bs []byte
-		bs, c.err = ioutil.ReadAll(c.resp.Body)
-		c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode, Body: string(bs)}
-	}
+	c.err = json.NewDecoder(c.resp.Body).Decode(obj)
 
-	c.resp.Body.Close()
 	return c.err
 }
 
@@ -141,42 +150,61 @@ func (c *httpCall) CollectJSON(obj interface{}) error {
 // the responses status code is not 2--, return a new error detailing
 // the responses status
 func (c *httpCall) CollectXML(obj interface{}) error {
-	if c.do(); c.err != nil {
+	defer func() {
+		if c.resp != nil && c.resp.Body != nil {
+			c.resp.Body.Close()
+		}
+	}()
+
+	if c.err != nil {
 		return c.err
 	}
 
-	if c.resp.StatusCode/100 == 2 {
-		c.err = xml.NewDecoder(c.resp.Body).Decode(obj)
-	} else {
-		var bs []byte
-		bs, c.err = ioutil.ReadAll(c.resp.Body)
-		c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode, Body: string(bs)}
-	}
+	c.err = xml.NewDecoder(c.resp.Body).Decode(obj)
 
-	c.resp.Body.Close()
 	return c.err
 }
 
-// CollectJSON finalizes the httpCall and returns the response body
+// CollectString finalizes the httpCall and returns the response body
 // as a string. If somehwere in the httpCall method
 // chain has returned an error, dont run the request and return the
 // error. If the request returns an error, return that error - or if
 // the responses status code is not 2--, return a new error detailing
 // the responses status
 func (c *httpCall) CollectString() (string, error) {
-	if c.do(); c.err != nil {
+	defer func() {
+		if c.resp != nil && c.resp.Body != nil {
+			c.resp.Body.Close()
+		}
+	}()
+
+	if c.err != nil {
 		return "", c.err
 	}
 
 	var bs []byte
-	if c.resp.StatusCode/100 == 2 {
-		bs, c.err = ioutil.ReadAll(c.resp.Body)
-	} else {
-		bs, c.err = ioutil.ReadAll(c.resp.Body)
-		c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode, Body: string(bs)}
+
+	decoded := false
+	// find gzip
+	if encs, ok := c.resp.Header["Content-Encoding"]; ok {
+
+		for _, e := range encs {
+			if e == "gzip" {
+				var g io.Reader
+				g, c.err = gzip.NewReader(c.resp.Body)
+				if c.err != nil {
+					return "", c.err
+				}
+				decoded = true
+				bs, c.err = ioutil.ReadAll(g)
+				break
+			}
+		}
 	}
 
-	c.resp.Body.Close()
+	if !decoded {
+		bs, c.err = ioutil.ReadAll(c.resp.Body)
+	}
 
 	return string(bs), c.err
 }
@@ -187,12 +215,8 @@ func (c *httpCall) CollectString() (string, error) {
 // if the responses status code is not 2--, return a new error detailing
 // the responses status
 func (c *httpCall) CollectResponse() (*http.Response, error) {
-	if c.do(); c.err != nil {
+	if c.err != nil {
 		return nil, c.err
-	}
-
-	if c.resp.StatusCode/200 != 2 {
-		c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode}
 	}
 
 	return c.resp, nil
@@ -200,12 +224,65 @@ func (c *httpCall) CollectResponse() (*http.Response, error) {
 
 // do checks for errors in the construction of the req, and if not
 // present runs the request, storing the value and error into itself
-func (c *httpCall) do() {
+func (c *httpCall) Do() *httpCall {
 	// if err has already been set by something
 	// dont bother trying to do the request
 	if c.err != nil {
-		return
+		return c
 	}
 
+	// fmt.Println(c.req.URL.String())
+
 	c.resp, c.err = c.client.Do(c.req)
+
+	// client errors should not change just with retrying
+	// so cancel out straight away
+	if c.err == nil && c.resp.StatusCode/100 == 4 {
+		c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode}
+	}
+
+	return c
+}
+
+//
+func (c *httpCall) DoWithRetry(maxAttempts int, delay DelayFunc) *httpCall {
+	// if err has already been set by something
+	// dont bother trying to do the request
+	if c.err != nil {
+		return c
+	}
+
+	attempts := 0
+
+	for (attempts == 0 || c.err != nil) && attempts < maxAttempts {
+
+		if attempts > 0 {
+			time.Sleep(delay(attempts))
+		}
+
+		// set the request body to read from the saved bytes
+		if c.body != nil {
+			c.req.Body = ioutil.NopCloser(bytes.NewReader(c.body))
+		}
+
+		c.resp, c.err = c.client.Do(c.req)
+
+		if c.err == nil {
+			// client errors should not change just with retrying, so cancel out
+			// straight away
+			if code := c.resp.StatusCode; code/100 == 4 {
+				c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode}
+			}
+
+			return c
+		} else {
+			attempts++
+		}
+	}
+
+	if attempts >= maxAttempts {
+		c.err = ErrMaxAttempts
+	}
+
+	return c
 }

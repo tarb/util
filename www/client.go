@@ -4,28 +4,31 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 )
 
 //
 type Client struct {
-	mu      sync.RWMutex
-	headers http.Header // default headers
-	client  *http.Client
+	mu         sync.RWMutex
+	headers    http.Header // default headers
+	HTTPClient *http.Client
+
+	MaxDelay time.Duration
 }
 
 //
 func New(cli *http.Client) *Client {
 	return &Client{
-		headers: make(http.Header),
-		client:  cli,
+		headers:    make(http.Header),
+		HTTPClient: cli,
 	}
 }
 
 //
-func Default() *Client {
+func NewDefault() *Client {
 	return &Client{
-		headers: make(http.Header),
-		client:  http.DefaultClient,
+		headers:    make(http.Header),
+		HTTPClient: http.DefaultClient,
 	}
 }
 
@@ -34,7 +37,7 @@ func Default() *Client {
 func (c *Client) Get(urlStr string) *httpCall {
 	u, err := url.Parse(urlStr)
 
-	return &httpCall{client: c.client, err: err, req: c.newReq(http.MethodGet, u)}
+	return &httpCall{client: c.HTTPClient, err: err, req: c.newReq(http.MethodGet, u)}
 }
 
 // Post creates a new httpCall with default values and
@@ -42,7 +45,7 @@ func (c *Client) Get(urlStr string) *httpCall {
 func (c *Client) Post(urlStr string) *httpCall {
 	u, err := url.Parse(urlStr)
 
-	return &httpCall{client: c.client, err: err, req: c.newReq(http.MethodPost, u)}
+	return &httpCall{client: c.HTTPClient, err: err, req: c.newReq(http.MethodPost, u)}
 }
 
 // Build creates a custom httpCall from the given parameters;
@@ -58,7 +61,7 @@ func (c *Client) Build(method, scheme, host, path string) *httpCall {
 		Path:   path,
 	}
 
-	return &httpCall{client: c.client, req: c.newReq(method, u)}
+	return &httpCall{client: c.HTTPClient, req: c.newReq(method, u)}
 }
 
 // SetDefaultHeaders gives an interface for setting which headers
