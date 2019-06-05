@@ -2,11 +2,9 @@ package www
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -183,30 +181,32 @@ func (c *httpCall) CollectString() (string, error) {
 	}
 
 	var bs []byte
-
-	decoded := false
-	// find gzip
-	if encs, ok := c.resp.Header["Content-Encoding"]; ok {
-
-		for _, e := range encs {
-			if e == "gzip" {
-				var g io.Reader
-				g, c.err = gzip.NewReader(c.resp.Body)
-				if c.err != nil {
-					return "", c.err
-				}
-				decoded = true
-				bs, c.err = ioutil.ReadAll(g)
-				break
-			}
-		}
-	}
-
-	if !decoded {
-		bs, c.err = ioutil.ReadAll(c.resp.Body)
-	}
+	bs, c.err = ioutil.ReadAll(c.resp.Body)
 
 	return string(bs), c.err
+}
+
+// CollectBytes finalizes the httpCall and returns the response body
+// as an array of bytes. If somehwere in the httpCall method
+// chain has returned an error, dont run the request and return the
+// error. If the request returns an error, return that error - or if
+// the responses status code is not 2--, return a new error detailing
+// the responses status
+func (c *httpCall) CollectBytes() ([]byte, error) {
+	defer func() {
+		if c.resp != nil && c.resp.Body != nil {
+			c.resp.Body.Close()
+		}
+	}()
+
+	if c.err != nil {
+		return nil, c.err
+	}
+
+	var bs []byte
+	bs, c.err = ioutil.ReadAll(c.resp.Body)
+
+	return bs, c.err
 }
 
 // CollectResponse finalizes the httpCall. If somewhere in the httpCall
@@ -238,7 +238,8 @@ func (c *httpCall) Do() *httpCall {
 	// client errors should not change just with retrying
 	// so cancel out straight away
 	if c.err == nil && c.resp.StatusCode/100 == 4 {
-		c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode}
+		bs, _ := ioutil.ReadAll(c.resp.Body)
+		c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode, Body: bs}
 	}
 
 	return c
@@ -251,6 +252,8 @@ func (c *httpCall) DoWithRetry(maxAttempts int, delay DelayFunc) *httpCall {
 	if c.err != nil {
 		return c
 	}
+
+	// fmt.Println(c.req.URL.String())
 
 	attempts := 0
 
@@ -271,13 +274,14 @@ func (c *httpCall) DoWithRetry(maxAttempts int, delay DelayFunc) *httpCall {
 			// client errors should not change just with retrying, so cancel out
 			// straight away
 			if code := c.resp.StatusCode; code/100 == 4 {
-				c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode}
+				bs, _ := ioutil.ReadAll(c.resp.Body)
+				c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode, Body: bs}
 			}
 
 			return c
-		} else {
-			attempts++
 		}
+
+		attempts++
 	}
 
 	if attempts >= maxAttempts {

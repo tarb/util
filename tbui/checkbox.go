@@ -17,7 +17,7 @@ type CheckBox struct {
 func (cb *CheckBox) Draw(x, y int, focused Element) {
 	x, y = x+cb.Padding.Left(), y+cb.Padding.Up()
 
-	var checkCol = termbox.ColorBlack
+	var checkCol = termbox.ColorBlack | termbox.AttrBold
 	if focused == cb {
 		checkCol = termbox.ColorWhite
 	}
@@ -54,9 +54,9 @@ func (cb *CheckBox) Handle(ev termbox.Event) {
 }
 
 //
-func (cb *CheckBox) HandleClick(mouseX, mouseY int) {
+func (cb *CheckBox) HandleClick(ev termbox.Event) {
 	//fmt.Println("checkbox", mouseX, mouseY, cb.Padding)
-	if mouseX >= cb.Padding.Left() && mouseX < cb.Padding.Left()+3 && mouseY >= cb.Padding.Up() && mouseY < cb.Padding.Up()+1 {
+	if ev.MouseX >= cb.Padding.Left() && ev.MouseX < cb.Padding.Left()+3 && ev.MouseY >= cb.Padding.Up() && ev.MouseY < cb.Padding.Up()+1 {
 		cb.check()
 	}
 }

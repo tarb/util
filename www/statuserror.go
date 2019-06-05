@@ -4,7 +4,7 @@ package www
 type StatusError struct {
 	Status     string
 	StatusCode int
-	Body       string
+	Body       []byte
 }
 
 // Error returns the Status value of the failed  request

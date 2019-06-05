@@ -1,17 +1,21 @@
 package tbui
 
 import (
+	"github.com/atotto/clipboard"
 	termbox "github.com/nsf/termbox-go"
 )
 
 //
 type EditBox struct {
 	Width       int
-	PlaceHolder string
+	MaxSize     int
 	HideContent bool
-	Submit      func()
 	Padding     Padding
-	Bind        *string
+	PlaceHolder string
+
+	Submit   func()
+	OnUpdate func([]rune, int)
+	Bind     *string
 
 	text      []rune
 	cursorIdx int
@@ -95,6 +99,15 @@ func (eb *EditBox) Handle(ev termbox.Event) {
 		if eb.Submit != nil {
 			eb.Submit()
 		}
+	case termbox.KeyCtrlC:
+		clipboard.WriteAll(eb.Text())
+	case termbox.KeyCtrlV:
+		if v, err := clipboard.ReadAll(); err == nil && v != "" {
+			for _, r := range v {
+				eb.insert(r)
+			}
+			eb.updateBind()
+		}
 	case termbox.KeyArrowLeft:
 		eb.cursorLeft()
 	case termbox.KeyArrowRight:
@@ -117,9 +130,10 @@ func (eb *EditBox) Handle(ev termbox.Event) {
 }
 
 //
-func (eb *EditBox) HandleClick(mouseX, mouseY int) {
+func (eb *EditBox) HandleClick(ev termbox.Event) {
+
 	// fmt.Println("editbox", mouseX, mouseY)
-	if newCIdx := eb.windowIdx + mouseX - eb.Padding.Left(); newCIdx-eb.windowIdx == 0 {
+	if newCIdx := eb.windowIdx + ev.MouseX - eb.Padding.Left(); newCIdx-eb.windowIdx == 0 {
 		if eb.windowIdx > 0 {
 			eb.windowIdx--
 		}
@@ -183,18 +197,24 @@ func (eb *EditBox) delete() {
 
 //
 func (eb *EditBox) insert(r rune) {
-	if len(eb.text) == eb.cursorIdx {
-		eb.text = append(eb.text, r)
-		eb.cursorIdx++
-	} else {
-		eb.text = append(eb.text, '!')
-		copy(eb.text[eb.cursorIdx+1:], eb.text[eb.cursorIdx:])
-		eb.text[eb.cursorIdx] = r
-		eb.cursorIdx++
-	}
+	if len(eb.text) < eb.MaxSize || eb.MaxSize == 0 {
+		if len(eb.text) == eb.cursorIdx {
+			eb.text = append(eb.text, r)
+			eb.cursorIdx++
+		} else {
+			eb.text = append(eb.text, '!')
+			copy(eb.text[eb.cursorIdx+1:], eb.text[eb.cursorIdx:])
+			eb.text[eb.cursorIdx] = r
+			eb.cursorIdx++
+		}
 
-	if eb.cursorIdx-eb.windowIdx+1 > eb.Width {
-		eb.windowIdx++
+		if eb.OnUpdate != nil {
+			eb.OnUpdate(eb.text, eb.cursorIdx-1)
+		}
+
+		if eb.cursorIdx-eb.windowIdx+1 > eb.Width {
+			eb.windowIdx++
+		}
 	}
 }
 
