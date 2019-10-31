@@ -2,12 +2,14 @@ package www
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -235,11 +237,17 @@ func (c *httpCall) Do() *httpCall {
 
 	c.resp, c.err = c.client.Do(c.req)
 
-	// client errors should not change just with retrying
-	// so cancel out straight away
-	if c.err == nil && c.resp.StatusCode/100 == 4 {
-		bs, _ := ioutil.ReadAll(c.resp.Body)
-		c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode, Body: bs}
+	if c.err == nil {
+		// check the encoding, and wrap in gzip if needed
+		if !strings.Contains(c.resp.Header.Get("Accept-Encoding"), "gzip") {
+			c.resp.Body, c.err = gzip.NewReader(c.resp.Body)
+		}
+		// client errors should not change just with retrying
+		// so cancel out straight away
+		if c.resp.StatusCode/100 == 4 {
+			bs, _ := ioutil.ReadAll(c.resp.Body)
+			c.err = StatusError{Status: c.resp.Status, StatusCode: c.resp.StatusCode, Body: bs}
+		}
 	}
 
 	return c

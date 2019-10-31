@@ -9,11 +9,11 @@ package chunk
 //     fmt.Println(nums[n[0]:n[1]])
 // }
 func Chunk(len, n int) [][2]int {
-	var result = make([][2]int, n)
-	var start int
+	result := make([][2]int, n)
+	start := 0
 
 	for i := range result {
-		var end int = len / n
+		end := len / n
 		if len%n > i {
 			end++
 		}
@@ -24,4 +24,17 @@ func Chunk(len, n int) [][2]int {
 	}
 
 	return result
+}
+
+// NumChunk returns how many chunks you would need to fit n items into len
+// For example,
+//	a slice with len 1000 with n of 200 would return 5
+//  a slice with len 801 with n of 200 would return 5
+//  a slice with len 1001 with n of 200 would return 6
+func NumChunk(len, n int) int {
+	if len%n == 0 {
+		return len / n
+	}
+
+	return len/n + 1
 }
