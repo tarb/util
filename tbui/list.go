@@ -6,143 +6,200 @@ import (
 
 //
 type List struct {
-	Items   []Element
-	Width   int
-	Height  int
-	Padding Padding
-
-	selectedIdx int
-	windowIdx   int
+	Items       []Element
+	BindIndex   *int
+	Index       int
+	WindowIndex int
+	Height      int
+	OnChange    func(int)
 }
 
 //
-func (l *List) Draw(x, y int, focus Element) {
-	var eX, eY int = x + l.Padding.Left(), y + l.Padding.Up()
+func (dl *List) Draw(x, y int, focus Element) {
+	var eX, eY int = x, y
 	var sumH int
 
-	for _, e := range l.Items[l.windowIdx:] {
-		var eH int
+	for i := dl.WindowIndex; i < len(dl.Items); i++ {
+		var e = dl.Items[i]
 
-		if ex, ok := e.(Expandable); ok && e == l.Items[l.selectedIdx] {
-			_, eH = ex.ExpandSize()
-		} else {
-			_, eH = e.Size()
+		var listFocus Element
+		if i == dl.Index {
+			listFocus = e
 		}
 
-		if sumH+eH >= l.Height {
+		var draw func(int, int, Element)
+		var size func() (int, int)
+		if ex, ok := e.(Expandable); ok && listFocus != nil {
+			size = ex.ExpandSize
+			draw = ex.ExpandDraw
+		} else {
+			size = e.Size
+			draw = e.Draw
+		}
+
+		var eH int
+		_, eH = size()
+
+		if sumH+eH > dl.Height {
 			break
 		}
 
 		// if container is active list item, grab first focusable element inside
-		var listFocus Element = l.Items[l.selectedIdx]
-		if cont, ok := listFocus.(Container); ok {
+
+		if cont, ok := e.(Container); ok {
 			listFocus = cont.NextFocusable(nil)
 		}
 
-		e.Draw(eX, eY, listFocus)
+		draw(eX, eY, listFocus)
 		eY, sumH = eY+eH, sumH+eH
 	}
 }
 
 //
-func (l *List) Size() (int, int) {
-	var maxX int
+func (dl *List) Size() (int, int) {
+	var maxX, sumY int
 
-	for _, e := range l.Items {
-		var eW, _ int = e.Size()
+	for i := dl.WindowIndex; i < len(dl.Items); i++ {
+		var e = dl.Items[i]
+
+		var eW, eH int
+		if ex, ok := e.(Expandable); ok && i == dl.Index {
+			eW, eH = ex.ExpandSize()
+		} else {
+			eW, eH = e.Size()
+		}
 
 		if eW > maxX {
 			maxX = eW
 		}
+		sumY += eH
+		if sumY > dl.Height {
+			break
+		}
 	}
 
-	maxX += (l.Padding.Left() + l.Padding.Right())
-
-	return maxX, l.Padding.Up() + l.Height + l.Padding.Down()
+	return maxX, dl.Height
 }
 
 //
-func (l *List) Handle(ev termbox.Event) {
+func (dl *List) Handle(ev termbox.Event) {
 	if ev.Key == termbox.KeyArrowUp {
-		l.scrollUp()
+		dl.scrollUp()
 	} else if ev.Key == termbox.KeyArrowDown {
-		l.scrollDown()
+		dl.scrollDown()
 	} else {
 		// pass event on to the next focusable thing in the item
-		if cont, ok := l.Items[l.selectedIdx].(Container); ok {
+		var e = dl.Items[dl.Index]
+		if cont, ok := e.(Container); ok {
 			if foc := cont.NextFocusable(nil); foc != nil {
 				foc.Handle(ev)
 			}
-		} else if foc, ok := l.Items[l.selectedIdx].(Focusable); ok {
+		} else if foc, ok := e.(Focusable); ok {
 			foc.Handle(ev)
 		}
 	}
 }
 
 //
-func (l *List) HandleClick(ev termbox.Event) {
-	// fmt.Println("list", mouseX, mouseY)
-	ev.MouseX, ev.MouseY = ev.MouseX-l.Padding.Left(), ev.MouseY-l.Padding.Up()
+func (dl *List) HandleClick(ev termbox.Event) {
+	// fmt.Println("list", ev.MouseX, ev.MouseY)
 
-	var sumY int
-	for i, c := range l.Items[l.windowIdx:] {
-		var cw, ch int
-		if ex, ok := c.(Expandable); ok && c == l.Items[l.selectedIdx] {
-			cw, ch = ex.ExpandSize()
-		} else {
-			cw, ch = c.Size()
+	switch ev.Key {
+	case termbox.MouseWheelDown:
+		if dl.WindowIndex+dl.visibleItems() < len(dl.Items) {
+			dl.WindowIndex++
 		}
 
-		if ev.MouseX >= 0 && ev.MouseY >= sumY && ev.MouseX < cw && ev.MouseY < sumY+ch {
-			ev.MouseY -= sumY
-
-			if clickable, ok := c.(Clickable); ok {
-				clickable.HandleClick(ev)
-			}
-			if cont, ok := c.(Container); ok {
-				cont.FocusClicked(ev)
-			}
-			l.selectedIdx = l.windowIdx + i
-
-			// scroll the windowIdx clicked on top|bottom element (if possible)
-			if i == 0 && l.windowIdx > 0 {
-				l.windowIdx--
-			} else if l.selectedIdx > l.windowIdx+l.visibleItems()-2 && l.windowIdx+l.visibleItems() < len(l.Items) {
-				l.windowIdx++
-			}
-
-			return
+	case termbox.MouseWheelUp:
+		if dl.WindowIndex > 0 {
+			dl.WindowIndex--
 		}
 
-		sumY += ch
+	case termbox.MouseLeft:
+		var sumY int
+
+		for i := dl.WindowIndex; i < len(dl.Items); i++ {
+			var e = dl.Items[i]
+
+			var cw, ch int
+			if ex, ok := e.(Expandable); ok && i == dl.Index {
+				cw, ch = ex.ExpandSize()
+			} else {
+				cw, ch = e.Size()
+			}
+
+			if ev.MouseX >= 0 && ev.MouseY >= sumY && ev.MouseX < cw && ev.MouseY < sumY+ch {
+
+				// adjust the event before passing it down
+				ev.MouseY -= sumY
+
+				if clickable, ok := e.(Clickable); ok {
+					clickable.HandleClick(ev)
+				}
+				if cont, ok := e.(Container); ok {
+					cont.FocusClicked(ev)
+				}
+
+				// fire events and update bindings
+				if dl.OnChange != nil && dl.Index != i { // fire registered onChange
+					dl.OnChange(i)
+				}
+				if dl.BindIndex != nil { // update bound index
+					*dl.BindIndex = i
+				}
+				dl.Index = i
+
+				// scroll the WindowIndex clicked on top|bottom element (if possible)
+				if i == dl.WindowIndex && dl.WindowIndex > 0 {
+					dl.WindowIndex--
+				} else if dl.Index > dl.WindowIndex+dl.visibleItems()-2 && dl.WindowIndex+dl.visibleItems() < len(dl.Items) {
+					dl.WindowIndex++
+				}
+
+				return
+			}
+			sumY += ch
+		}
+
 	}
+
 }
 
 //
-func (l *List) scrollDown() {
-	if l.selectedIdx < len(l.Items)-1 {
-		l.selectedIdx++
+func (dl *List) scrollDown() {
+	var lastIndex = len(dl.Items) - 1
 
-		var idx = l.selectedIdx
-		if idx < len(l.Items)-1 {
+	if dl.Index < lastIndex {
+		dl.Index++
+		if dl.BindIndex != nil {
+			*dl.BindIndex = dl.Index
+		}
+		if dl.OnChange != nil { // fire registered onChange
+			dl.OnChange(dl.Index)
+		}
+
+		var idx = dl.Index
+		if idx < lastIndex {
 			idx++
 		}
 
 		var sumY int
 		for i := idx; i >= 0; i-- {
+			var e = dl.Items[i]
+
 			var eh int
-			if ex, ok := l.Items[i].(Expandable); ok && i == l.selectedIdx {
+			if ex, ok := e.(Expandable); ok && i == dl.Index {
 				_, eh = ex.ExpandSize()
 			} else {
-				_, eh = l.Items[i].Size()
+				_, eh = e.Size()
 			}
 			sumY += eh
 
-			if sumY >= l.Height {
-				l.windowIdx = i + 1
+			if sumY >= dl.Height {
+				dl.WindowIndex = i + 1
 				break
 			}
-			if i == l.windowIdx {
+			if i == dl.WindowIndex {
 				break
 			}
 		}
@@ -150,30 +207,38 @@ func (l *List) scrollDown() {
 }
 
 //
-func (l *List) scrollUp() {
-	if l.selectedIdx > 0 {
-		l.selectedIdx--
+func (dl *List) scrollUp() {
+	if dl.Index > 0 {
+		dl.Index--
+		if dl.BindIndex != nil {
+			*dl.BindIndex = dl.Index
+		}
+		if dl.OnChange != nil { // fire registered onChange
+			dl.OnChange(dl.Index)
+		}
 
-		if l.selectedIdx == l.windowIdx && l.selectedIdx != 0 {
-			l.windowIdx--
+		if dl.Index == dl.WindowIndex && dl.Index != 0 {
+			dl.WindowIndex--
 		}
 	}
 }
 
 //
-func (l *List) visibleItems() int {
+func (dl *List) visibleItems() int {
 	var sumY, count int
 
-	for _, c := range l.Items[l.windowIdx:] {
+	for i := dl.WindowIndex; i < len(dl.Items); i++ {
+		var e = dl.Items[i]
+
 		var _, ch int
-		if ex, ok := c.(Expandable); ok && c == l.Items[l.selectedIdx] {
+		if ex, ok := e.(Expandable); ok && i == dl.Index {
 			_, ch = ex.ExpandSize()
 		} else {
-			_, ch = c.Size()
+			_, ch = e.Size()
 		}
 
 		sumY += ch
-		if sumY > l.Height {
+		if sumY > dl.Height {
 			break
 		}
 		count++
