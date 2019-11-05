@@ -28,7 +28,7 @@ func Chunk(len, n int) [][2]int {
 
 // NumChunk returns how many chunks you would need to fit n items into len
 // For example,
-//	a slice with len 1000 with n of 200 would return 5
+//  a slice with len 1000 with n of 200 would return 5
 //  a slice with len 801 with n of 200 would return 5
 //  a slice with len 1001 with n of 200 would return 6
 func NumChunk(len, n int) int {
