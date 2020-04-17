@@ -37,7 +37,7 @@ func NewDefault() *Client {
 func (c *Client) Get(urlStr string) *httpCall {
 	u, err := url.Parse(urlStr)
 
-	return &httpCall{client: c.HTTPClient, err: err, req: c.newReq(http.MethodGet, u)}
+	return &httpCall{client: c.HTTPClient, err: err, req: c.newReq(http.MethodGet, u), headers: c.headers, copyHeader: c.copyDefaultHeader}
 }
 
 // Post creates a new httpCall with default values and
@@ -45,7 +45,7 @@ func (c *Client) Get(urlStr string) *httpCall {
 func (c *Client) Post(urlStr string) *httpCall {
 	u, err := url.Parse(urlStr)
 
-	return &httpCall{client: c.HTTPClient, err: err, req: c.newReq(http.MethodPost, u)}
+	return &httpCall{client: c.HTTPClient, err: err, req: c.newReq(http.MethodPost, u), headers: c.headers, copyHeader: c.copyDefaultHeader}
 }
 
 // Build creates a custom httpCall from the given parameters;
@@ -55,23 +55,23 @@ func (c *Client) Post(urlStr string) *httpCall {
 // method, suggest using contants found in http package
 // (http.MethodGet, http.MethodPost, etc)
 func (c *Client) Build(method, scheme, host, path string) *httpCall {
-	var u = &url.URL{
+	u := &url.URL{
 		Scheme: scheme,
 		Host:   host,
 		Path:   path,
 	}
 
-	return &httpCall{client: c.HTTPClient, req: c.newReq(method, u)}
+	return &httpCall{client: c.HTTPClient, req: c.newReq(method, u), headers: c.headers, copyHeader: c.copyDefaultHeader}
 }
 
-// SetDefaultHeaders gives an interface for setting which headers
+// DefaultHeaders gives an interface for setting which headers
 // will be added by defualt when doing a new httpCall.
 //
 // Example
 // SetDefaultHeaders(func(h http.Header) {
 //     h.Set("User-Agent", "CustomAgentString")
 // })
-func (c *Client) SetDefaultHeaders(fn func(http.Header)) {
+func (c *Client) DefaultHeaders(fn func(http.Header)) {
 	c.mu.Lock()
 	fn(c.headers)
 	c.mu.Unlock()
@@ -87,8 +87,8 @@ func (c *Client) ClearDefaultHeaders() {
 
 // getDefaultHeaders returns a new http.Header with a copy of the
 // values that have been set as default.
-func (c *Client) getDefaultHeaders() http.Header {
-	var h = make(http.Header)
+func (c *Client) copyDefaultHeader() http.Header {
+	h := make(http.Header)
 
 	c.mu.RLock()
 	for k, v := range c.headers {
@@ -106,7 +106,7 @@ func (c *Client) newReq(method string, u *url.URL) *http.Request {
 		Method:        method,
 		URL:           u,
 		Host:          u.Host,
-		Header:        c.getDefaultHeaders(),
+		Header:        c.headers,
 		Body:          nil,
 		ContentLength: 0,
 	}

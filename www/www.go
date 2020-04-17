@@ -23,11 +23,13 @@ var (
 // it in the intended way - culminating each request in a
 // CollectX call.
 type httpCall struct {
-	err    error
-	body   []byte
-	client *http.Client
-	req    *http.Request
-	resp   *http.Response
+	err        error
+	body       []byte
+	client     *http.Client
+	req        *http.Request
+	resp       *http.Response
+	headers    http.Header
+	copyHeader func() http.Header
 }
 
 // WithQuery is used to update the url query it expects a func
@@ -43,7 +45,7 @@ type httpCall struct {
 //
 // will produce:  https://localhost/search?q=golang&results=10
 func (c *httpCall) WithQuery(fn func(url.Values)) *httpCall {
-	var queries = make(url.Values)
+	queries := make(url.Values)
 	fn(queries)
 
 	c.req.URL.RawQuery = queries.Encode()
@@ -81,7 +83,7 @@ func (c *httpCall) WithJSONBody(jsonBody interface{}) *httpCall {
 // This method also adds the application/x-www-form-urlencoded
 // Content-Type header to the request
 func (c *httpCall) WithFormBody(fn func(url.Values)) *httpCall {
-	var formData = make(url.Values)
+	formData := make(url.Values)
 	fn(formData)
 
 	c.body = []byte(formData.Encode())
@@ -117,7 +119,9 @@ func (c *httpCall) WithTextBody(body string) *httpCall {
 //         h.Set("User-Agent", "CustomAgentString")
 //     }).
 func (c *httpCall) WithHeaders(fn func(http.Header)) *httpCall {
+	c.req.Header = c.copyHeader()
 	fn(c.req.Header)
+
 	return c
 }
 
