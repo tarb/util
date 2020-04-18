@@ -119,7 +119,6 @@ func (c *httpCall) WithTextBody(body string) *httpCall {
 //         h.Set("User-Agent", "CustomAgentString")
 //     }).
 func (c *httpCall) WithHeaders(fn func(http.Header)) *httpCall {
-	c.req.Header = c.copyHeader()
 	fn(c.req.Header)
 
 	return c

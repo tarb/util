@@ -106,7 +106,7 @@ func (c *Client) newReq(method string, u *url.URL) *http.Request {
 		Method:        method,
 		URL:           u,
 		Host:          u.Host,
-		Header:        c.headers,
+		Header:        c.copyDefaultHeader(),
 		Body:          nil,
 		ContentLength: 0,
 	}
