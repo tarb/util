@@ -23,13 +23,12 @@ var (
 // it in the intended way - culminating each request in a
 // CollectX call.
 type httpCall struct {
-	err        error
-	body       []byte
-	client     *http.Client
-	req        *http.Request
-	resp       *http.Response
-	headers    http.Header
-	copyHeader func() http.Header
+	err     error
+	body    []byte
+	client  *http.Client
+	req     *http.Request
+	resp    *http.Response
+	headers http.Header
 }
 
 // WithQuery is used to update the url query it expects a func
@@ -119,8 +118,10 @@ func (c *httpCall) WithTextBody(body string) *httpCall {
 //         h.Set("User-Agent", "CustomAgentString")
 //     }).
 func (c *httpCall) WithHeaders(fn func(http.Header)) *httpCall {
-	fn(c.req.Header)
+	hdrs := make(http.Header)
+	fn(hdrs)
 
+	c.req.Header = hdrs
 	return c
 }
 
@@ -263,8 +264,6 @@ func (c *httpCall) DoWithRetry(maxAttempts int, delay DelayFunc) *httpCall {
 	if c.err != nil {
 		return c
 	}
-
-	// fmt.Println(c.req.URL.String())
 
 	attempts := 0
 
