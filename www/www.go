@@ -63,6 +63,9 @@ func (c *httpCall) WithJSONBody(jsonBody interface{}) *httpCall {
 
 	c.req.Body = ioutil.NopCloser(bytes.NewReader(c.body))
 	c.req.ContentLength = int64(len(c.body))
+	if c.req.Header == nil {
+		c.req.Header = make(http.Header)
+	}
 	c.req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	return c
@@ -86,10 +89,14 @@ func (c *httpCall) WithFormBody(fn func(url.Values)) *httpCall {
 	fn(formData)
 
 	c.body = []byte(formData.Encode())
-
 	c.req.Body = ioutil.NopCloser(bytes.NewReader(c.body))
 	c.req.ContentLength = int64(len(c.body))
+
+	if c.req.Header == nil {
+		c.req.Header = make(http.Header)
+	}
 	c.req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
 	return c
 }
 
@@ -100,10 +107,14 @@ func (c *httpCall) WithFormBody(fn func(url.Values)) *httpCall {
 // request
 func (c *httpCall) WithTextBody(body string) *httpCall {
 	c.body = []byte(body)
-
 	c.req.Body = ioutil.NopCloser(bytes.NewReader(c.body))
 	c.req.ContentLength = int64(len(c.body))
+
+	if c.req.Header == nil {
+		c.req.Header = make(http.Header)
+	}
 	c.req.Header.Set("Content-Type", "text/plain")
+
 	return c
 }
 
@@ -118,10 +129,12 @@ func (c *httpCall) WithTextBody(body string) *httpCall {
 //         h.Set("User-Agent", "CustomAgentString")
 //     }).
 func (c *httpCall) WithHeaders(fn func(http.Header)) *httpCall {
-	hdrs := make(http.Header)
-	fn(hdrs)
+	if c.req.Header == nil {
+		c.req.Header = make(http.Header)
+	}
 
-	c.req.Header = hdrs
+	fn(c.req.Header)
+
 	return c
 }
 
